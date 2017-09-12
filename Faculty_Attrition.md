@@ -33,8 +33,6 @@ Contents
     -   Smoothing Splines
     -   Frailty Models
 
-add
-
 Configure
 ---------
 
@@ -64,6 +62,12 @@ data<-sdata %>%
 data$TIME[data$TIME==0]<-1 # necessary to correct for zero time case (given value of 1)
 data<-na.omit(data)
 ```
+
+``` r
+length(unique(data$REFID)) # The number of individuals who participated in the study
+```
+
+    ## [1] 19349
 
 ### Assumptions of Survival Analysis
 
@@ -151,7 +155,7 @@ This mean is based on a truncated estimator, so we need to set an upper limit. I
 km.tenure <- survfit( Surv(TIME, Censor)~ strata(EntryTENSTA), data=data, type="kaplan-meier")
 ggsurvplot(km.tenure, data = data, ylim = c(.5,1), size = 1, palette = c("#E7B800", "#2E9FDF", "blue"),
   conf.int = TRUE, legend.labs = 
-    c("Tenure-Track", "Non-Tenure track","No Tenure System"),  ggtheme = theme_bw(),  ncensor.plot.height = 0.25, title="Probability of Remaining in Academia: by Initial Tenure Status", subtitle="Kaplan-Meier Estimator", xlab="Years Since First Academic Job", ylab="Probability of Remaining in Academia", legend="right", legend.title="Tenure Status",ncensor.plot =T )
+    c("Tenure-Track", "Non-Tenure track","No Tenure System"),  ggtheme = theme_bw(),  ncensor.plot.height = 0.25, title="Probability of Remaining in Academia: by Initial Tenure Status", subtitle="Kaplan-Meier Estimator", xlab="Years Since First Academic Job", ylab="Probability of Remaining in Academia", legend="right", legend.title="Tenure Status",ncensor.plot =F )
 ```
 
 ![](graphs/Multiple_Groups_tenure-1.png)
