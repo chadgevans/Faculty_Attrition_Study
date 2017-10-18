@@ -249,9 +249,24 @@ One case worth noting is that the Weibull distribution (including the exponentia
 
 ### Cox Proportional Hazards Model
 
-The most common semiparametric method is the Cox Proportional Hazards Model. The biggest advantage of the Cox model relates to its flexibilty of functional form. Parametric models require a choice of functional form and often there is no good basis for which to choose. In many instances the choice can be overly restrictive. The Cox model requires no commitment to the functional form of the baseline hazard function. This is a semi-parametric model in that only the effects of covariates are parametrized, and not the hazard function. In other words, we don't make any distributional assumptions about survival times.
+The most common semiparametric method is the Cox Proportional Hazards Model. The biggest advantage of the Cox model relates to the flexibilty it offers with regard to functional form. Unlike parametric approaches, you do not need to actually specify the functional form of the baseline hazard function. We only parameterize the effects of covariates. Because no distributional assumptions are made about survival times, our model is more robust to errors in specification.
 
 Cox models work mathematically because, when hazards are proportional, it is possible to factor the Likelihood function into a part with betas and a part with betas and the baseline hazard function. We sacrifice the information of part two and use the standard likelihood approach to estimate the betas in part one (which is consistent and asymptotically normal). This approach is not fully efficient, but we gain flexibilty with functional form when we do this (making estimates more robust). It turns out that estimating part one only requires knowing the order in which events took place.
+
+Mathematically, the (partial) likelihood function is expressed as follows:
+$$PL = \\prod\_{k=1}^{K}L\_k = \\prod\_{k=1}^{K}\\dfrac{h\_k(t\_k)}{\\sum\_{j \\in R(t\_k)}h\_j(t\_k)}$$
+
+To clarify, K is the total number of events experienced in the sample. R(t\_k) is the risk set (i.e., all the individuals who remain at risk of event occurance, tj ≥ tk). As in traditional maximum likelihood, we iteratively choose the set of parameters that maximize PL (the partial likelihood value associated with the observed values).
+
+Consider a set of 10 individuals. Assume 7 of them experience events and 3 do not. First we order the set by the time of event occurance or censoring. This establishes the rank order of event times. Then we calculate the partial likelihood with respect to each person who experiences an event. The first likelihood would be
+$$\\dfrac{e^{\\beta X\_1}}{e^{\\beta X\_2}+e^{\\beta X\_3}+...+e^{\\beta X\_10}}$$
+.
+
+The second rank ordered person's likelihood would be
+$$\\dfrac{e^{\\beta X\_2}}{e^{\\beta X\_3}+e^{\\beta X\_4}+...+e^{\\beta X\_10}}$$
+.
+
+Censored observations would not contribute a likelhood because they did not experience an event. Censoring is accomodated, however, in that they influence the denominator in the likelihoods of individuals who did experience an event. Again, it is important to point out that, because of the factorization, the partial likelihood does not depend on the specific time at which events occurred. It only depends on the order of event occurance.
 
 There are some implicit assumptions, however. For one, we must assume that all characteristics impacting the hazard are included in the model. Also, censoring must be noninformative, observations must be independent and variable must also be measured without error.
 
