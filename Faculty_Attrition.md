@@ -84,10 +84,6 @@ length(unique(data$REFID))  # The number of individuals who participated in the 
 Life Tables
 -----------
 
-The life table method or estimator is also known as the actuarial method/estimator. For the life table method, if observations are censored on the same month (or time unit) that events occurred, they are assumed to be at risk for just half the month. This is in contrast to the Kaplan-Meier estimator which assumes they are at risk for the whole month. The KM estimator is generally better for smaller datasets with exact times of event occurance.
-
-First let's write a function that takes the data as its argument and generates a lifetable.
-
 ``` r
 intervals <- 2  # number units per intervals for life table
 LifeTableIt <- function(data) {
@@ -162,7 +158,7 @@ Clearly, the survival probabilities cascade much more rapidly for NTT and NTS fa
 
 #### Life Table (Actuarial) Estimator
 
-Survival probabilities are sometimes communicated most efficiently in graphical form. The following graph plots the actuarial survival probabilities for each class of faculty.
+The following graph plots the actuarial survival probabilities for each class of faculty.
 
 ``` r
 TYPE <- c(rep("Tenure-Track", 11), rep("Non-Tenure Track", 11), rep("Non-Tenure System", 
@@ -188,7 +184,7 @@ ggplot(ltab2, aes(x = TIME, y = SURV, group = rev(TYPE), colour = rev(TYPE))) +
 
 #### Kaplan-Meier (Product Limit) Estimator
 
-These survival probabilities can also be estimated and graphed using the KM estimator. Allison recommends reporting only the actuarial estimator, probably because it is more robust for larger samples.
+These survival probabilities can also be estimated and graphed using the KM estimator. In this chapter, I will be reporting only the actuarial estimator, as it is more robust for larger samples.
 
 ``` r
 km.tenure <- survfit(Surv(TIME, Censor) ~ strata(EntryTENSTA), data = data, 
@@ -203,11 +199,11 @@ ggsurvplot(km.tenure, data = data, ylim = c(0.5, 1), size = 1, palette = c("#E7B
 
 ![](graphs/KM_Graph-1.png)
 
-The default confidence interval (above) is log, which calculates intervals based on log(survival). Other options include plain or log-log. IDRE has code for another method called loghall.
+The default confidence interval (above) is log, which calculates intervals based on log(survival).
 
 ### Statistical Test for differences
 
-Often it is useful to have a statistical test for whether survival curves of two groups differ. The following function implements the G-rho family of Harrington and Fleming (1982), with weights on each death of S(t)^rho, where S is the Kaplan-Meier estimate of survival. With rho = 0 this is the log-rank or Mantel-Haenszel test, and with rho = 1 it is equivalent to the Peto & Peto modification of the Gehan-Wilcoxon test. Allison also discusses other possibilities, including the Wilcoxon test, the Cox test of equality, the Tarone-Ware test of equality, the Peto-Peto-Prentice test of equality and the Generalized Fleming-Harrington test of equality. Let's look at the most common test, the log-rank test.
+Often it is useful to have a statistical test for whether survival curves of two groups differ. Let's look at the most common test, the log-rank test (a.k.a. the Mantel-Haenszel test).
 
 ``` r
 survdiff(Surv(TIME, Censor) ~ EntryTENSTA, data = data, rho = 0)  # log-rank or Mantel-Haenszel test
@@ -228,48 +224,20 @@ survdiff(Surv(TIME, Censor) ~ EntryTENSTA, data = data, rho = 0)  # log-rank or 
     ## 
     ##  Chisq= 880  on 2 degrees of freedom, p= 0
 
-The null hypothesis for a log-rank test is that the groups have the same survival. In this case, the Chi-square statistic is significant for tenure status of first appointment. The survival curve, therefore, differs based on the tenure status of the PhD recipient's first academic job. But the KM approach is not able to estimate survival adjusted for covariates. For this reason, we will return to the semi-parametric Cox Proportional hazards model and also parametric survival models shortly.
+The null hypothesis for a log-rank test is that the groups have the same survival. In this case, the Chi-square statistic is significant for tenure status of first appointment. The survival curve, therefore, differs based on the tenure status of the PhD recipient's first academic job.
 
 #### Summary of Nonparametric models
-
-Life tables are a great way to summarize distributions and survival curves. Kaplan-Meier curves and log-rank tests are also useful, however, they are most useful when the predictor variable is categorical (e.g., drug vs. placebo), or takes a small number of values (e.g., drug doses 0, 20, 50, and 100 mg/day) that can be treated as categorical. The log-rank test and KM curves don’t work easily with quantitative predictors. For quantitative predictor variables, we turn to alternative methods like the Cox proportional hazards model or Accelerated Failure Time (AFT) models. Such models work also with categorical predictor variables, encoded as {0,1} indicator or dummy variables.
 
 Substantially, the actuarial estimator and KM estimator tell similar stories. Attrition is much higher and more rapid for faculty working off the tenure track. The lifetable estimator perhaps shows a slightly higher attrition rate for NTS faculty, comparted to the KM estimate.
 
 Regression Models for Survival Data
 -----------------------------------
 
-There are two types of regression models in survival analysis:
+There are two types of regression models in survival analysis, semi-parametric and fully-parametric. In this study, we will consider both approaches. For semi-parametric analysis, I'll utilize the cox proportional hazards model. I will first treat the censoring as right censoring. Then I will treat it as interval censored. Technically, these data are interval censored, however, there is not a good package yet for R that allows for interval censoring and also allows for interactions between tenure status and time. This interaction is crucial, because it allows for the cox model to handle non-proportional hazards. As Allison says, "Testing is both the diagnosis and the solution."
 
-1.  Semi-parametric models, the most common of which is the Cox Proportional Hazards model. Proportional hazard models in general (like the Cox model) assume that the effect of a covariate is to multiply a baseline hazard by some constant. Hazards are “proportional” when the ratio of the hazards for any two individuals is constant, i.e., it does not depend on time.
+For the parametric analysis (AFT models), we'll try different functional forms. At the end, I compare the results of the cox models with the results of the exponential form.
 
-2.  Fully Parametric AFT models, where it is assumed that log(To) has a specific probability distribution. This class of models assumes that the effect of a covariate is to accelerate or decelerate the life course of a career by some constant.
-
-One case worth noting is that the Weibull distribution (including the exponential distribution as a special case) can be parameterised as either a proportional hazards model or an AFT model. It is the only family of distributions that possesses this property.
-
-### Cox Proportional Hazards Model
-
-The most common semiparametric method is the Cox Proportional Hazards Model. The biggest advantage of the Cox model relates to the flexibilty it offers with regard to functional form. Unlike parametric approaches, you do not need to actually specify the functional form of the baseline hazard function. We only parameterize the effects of covariates. Because no distributional assumptions are made about survival times, our model is more robust to errors in specification.
-
-Cox models work mathematically because, when hazards are proportional, it is possible to factor the Likelihood function into a part with betas and a part with betas and the baseline hazard function. We sacrifice the information of part two and use the standard likelihood approach to estimate the betas in part one (which is consistent and asymptotically normal). This approach is not fully efficient, but we gain flexibilty with functional form when we do this (making estimates more robust). It turns out that estimating part one only requires knowing the order in which events took place.
-
-Mathematically, the (partial) likelihood function is expressed as follows: $PL = \\prod\_{k=1}^{K}L\_k = \\prod\_{k=1}^{K}\\dfrac{h\_k(t\_k)}{\\sum\_{j \\in R(t\_k)}h\_j(t\_k)}$
-
-To clarify, K is the total number of events experienced in the sample. R(t\_k) is the risk set (i.e., all the individuals who remain at risk of event occurance, tj ≥ tk). As in traditional maximum likelihood, we iteratively choose the set of parameters that maximize PL (the partial likelihood value associated with the observed values).
-
-Consider a set of 10 individuals. Assume 7 of them experience events and 3 do not. First we order the set by the time of event occurance or censoring. This establishes the rank order of event times. Then we calculate the partial likelihood with respect to each person who experiences an event. The first likelihood would be $\\dfrac{e^{\\beta X\_1}}{e^{\\beta X\_2}+e^{\\beta X\_3}+...+e^{\\beta X\_10}}$.
-
-The second rank ordered person's likelihood would be $\\dfrac{e^{\\beta X\_2}}{e^{\\beta X\_3}+e^{\\beta X\_4}+...+e^{\\beta X\_10}}$.
-
-Censored observations would not contribute a likelhood because they did not experience an event. Censoring is accomodated, however, in that they influence the denominator in the likelihoods of individuals who did experience an event. Again, it is important to point out that, because of the factorization, the partial likelihood does not depend on the specific time at which events occurred. It only depends on the order of event occurance.
-
-There are some implicit assumptions, however. For one, we must assume that all characteristics impacting the hazard are included in the model. Also, censoring must be noninformative, observations must be independent and variable must also be measured without error.
-
-Survival analysis is more robust than traditional OLS, in particular because of how it accommodates censoring. Quite commonly, survival data are right censored. This means that for some observations, we do not observe the event of interest. We only know that the event occurs sometime in the future for that observation. In other cases, data are interval censored. This means that we do not directly observe the event times of individuals, we can only say that the event occurs within some specified interval. Of course, sometimes data are both right censored (for some observations) and interval censored. This in the case for this study. We observe several waves of data and we know the interval during which the event occured for most observations. Sometimes we only know that the event occurs some point after the last interval.
-
-Unfortunately, R's capabilities are somewhat limited with regard to interval censored data. coxph() in the "survival" package (the function most commonly used for cox models) does not account for interval censoring--it only handles right censoring. Nevertheless, in this exercise we'll first specify a cox model treating time-to-event as if it were entirely right censored. After that, we'll turn to another package that is less commonly used in survival analysis, but does handle both right censoring and interval censored data.
-
-For specifying our model, we will subset the data and first train a model using training data. After we are satisfied with that specification, we'll test using the independent test data. This will help prevent overfitting.
+For specifying our models, we will subset the data and first train models using training data. After we are satisfied with that specification, we'll test all models using the independent test data. This will help prevent overfitting.
 
 ``` r
 smp_size <- floor(0.6 * nrow(data))
@@ -280,11 +248,11 @@ train <- data[train_ind, ]
 test <- data[-train_ind, ]
 ```
 
+### Cox Proportional Hazards Model
+
 #### Right Censored Data Model
 
-First, we fit a simple Cox model predicting attrition from academia from a categorical predictor of tenure status at workforce entry. We assume here that we know exact event times (not the interval). We employ the efron method of dealing with ties, although other popular methods (e.g., breslow method) are available. The Efron approximation is more accurate when dealing with tied death times, and is as efficient computationally.
-
-These data are also censored (partially) on the left. Specifically, we know that individuals entered academia between two study waves, but we do not know the particular entry year. So we make an assumption for all of our models that time of entry was one year prior to the first wave when we observe their participation in academia. In other words, we assume that they entered the position midway through the previous interval. This will be about right on average.
+First, we fit a simple Cox model predicting attrition from academia from a categorical predictor of tenure status at workforce entry. We employ the efron method of dealing with ties, although other popular methods (e.g., breslow method) are available. The Efron approximation is more accurate when dealing with tied death times, and is as efficient computationally.
 
 The Surv function here frames censoring as follows. It assumes that individuals entered the study halfway through the previous interval. It treats censoring from the "EndDate"--that is, the last year he or she was still employed. Censoring, of course, happens after that point, so an individual who enters in year 0, remains in the study through year 2 in its entirely and subsequently drops out between year 2 and 4 would be coded as "3+." There are two years for the full interval, plus the extra entry year.
 
@@ -297,7 +265,21 @@ Proportional Hazards models and AFT models must be interpreted in different ways
 
 In this case, the effect of initial tenure status on time to attrition has an estimated coefficient of 1.0089259 and 1.3237404. Exponentiated, this means that subjects appointed to lower tenure-status jobs multiply their baseline hazards *h*<sub>0</sub>(*t*) by a factor of 2.7426537 and 3.7574493. Their "risk"" of attriting from academia is 174.2653671 and 275.744933 percent higher than academics who begin immediately on the tenure-track. Importantly, Cox models state that this is the impact on the subject's hazard at any given time, t. It does not, however, imply an expansion (or contraction) of the lifespan of the subject.
 
-Now let's build a more comprehensive model. Let's specify a complex model using training data and then test that model using independent test data. This will prevent overfitting. Importantly we'll include an interaction between time and our tenure status variables (NTT or NTS dummies) to test the assumption of proportional hazards. Here we use the TIME2 variable which simple adds an extra year to everyone's event time. You are basically assuming then that their interval began halfway through the previous interval.
+An important limitation of this model is that it does not account for the possibility of non-proportional hazards based on tenure status. Let's test whether the proportional hazards assumption may have been violated in this analysis.
+
+``` r
+cox.zph <- cox.zph(RC_Mod1, transform = "km")
+round(cox.zph$table, 3)
+```
+
+    ##           rho  chisq     p
+    ## NTT    -0.052  3.716 0.054
+    ## NTS    -0.103 14.291 0.000
+    ## GLOBAL     NA 15.170 0.001
+
+This function tests proportionality by interacting each predictor with log time (km transformation). Rho is the pearson product-moment correlation between the scaled residuals (Schoenfeld) and log(time) for each covariate. The global test jointly tests all of the interactions. Low p-values suggest a violation of the assumption of proportional hazards.
+
+Now let's build a more comprehensive model. Importantly we'll include an interaction between time and our tenure status variables (NTT or NTS dummies) to test the assumption of proportional hazards and also correct for non-proportional hazards. Here we use the TIME2 variable which simply adds an extra year to everyone's event time. We are basically assuming then that their interval began halfway through the previous interval.
 
 ``` r
 RC_Mod2 <- coxph(Surv(TIME2, Censor) ~ NTT + NTS + DEG2ENTRY + EntryWAPRI + 
@@ -310,44 +292,7 @@ summary(RC_Mod2)
 
 Even after controlling for background characteristics, there are significant differences. Here, NTT status or working at a college or university without a tenure system impacts the hazard, multiplying the baseline by a factor of 2.8598117 and 3.4658201. This is equivalent to saying that each tenure status increases the hazard of attrition by 185.9811676 and 246.5820096 percent, controlling for background characteristics. R output also provides the exponentiated negative coefficient. To my understanding, that just allows you to compare the groups relative to the baseline hazard of the tenure-track group. Robust standard errors were used in this model.
 
-The model reveals other important predcitors, including the subject's main job and possible interactions between institution type and public/private status. The interaction between time and no tenure system status is somewhat concerning. These issues are being worked through with Allison.
-
-An important assumption of the Cox model is that hazard functions are proportional. We can test each of the variables in the model, as well as test the model as a whole using the cox.zph() function. It tests proportionality by interacting each predictor with log time (km transformation). Rho is the pearson product-moment correlation between the scaled residuals (Schoenfeld) and log(time) for each covariate. The global test jointly tests all of the interactions. Low p-values suggest a violation of the assumption of proportional hazards.
-
-``` r
-cox.zph <- cox.zph(RC_Mod2, transform = "km")
-round(cox.zph$table, 3)
-```
-
-    ##                                                       rho    chisq     p
-    ## NTT                                                -0.519  438.477 0.000
-    ## NTS                                                -0.595  634.254 0.000
-    ## DEG2ENTRY                                           0.012    0.196 0.658
-    ## EntryWAPRIOther                                    -0.016    0.303 0.582
-    ## EntryWAPRIResearch                                 -0.032    1.188 0.276
-    ## EntryWKTRNITraining                                 0.016    0.335 0.563
-    ## EntryPUBPRIPrivate                                 -0.051    3.397 0.065
-    ## EntryEMTPTwo-year                                   0.014    0.237 0.627
-    ## EntryEMTPMed                                        0.104   13.156 0.000
-    ## EntryEMTPUni Research Institute                     0.002    0.003 0.956
-    ## SDRCARNR2                                           0.006    0.049 0.824
-    ## SDRCARNDoctorate                                   -0.001    0.001 0.970
-    ## SDRCARNOther                                        0.030    1.198 0.274
-    ## SDRCARNMedHealth                                    0.111   15.238 0.000
-    ## EntryAGE                                            0.063    4.779 0.029
-    ## GENDERFemale                                        0.056    3.918 0.048
-    ## MINRTYYes                                          -0.052    3.420 0.064
-    ## EntryMARINDYes                                     -0.052    3.480 0.062
-    ## EntryCHLVINYes                                      0.000    0.000 0.988
-    ## EntryCTZUSINCitizen                                 0.028    0.961 0.327
-    ## tt(NTT)                                             0.606  658.787 0.000
-    ## tt(NTS)                                             0.698 1117.724 0.000
-    ## EntryPUBPRIPrivate:EntryEMTPTwo-year                0.025    0.814 0.367
-    ## EntryPUBPRIPrivate:EntryEMTPMed                     0.030    1.116 0.291
-    ## EntryPUBPRIPrivate:EntryEMTPUni Research Institute -0.002    0.003 0.954
-    ## GLOBAL                                                 NA 1212.760 0.000
-
-Generally, there is some evidence that the hazards are not propoprtional (violating the key assumption). For most covariates, rho is not significant. However, it is concerning that it is significant for our two most important predictors above (NTT and Non-tenure system). Also, the global test is significant. The significant interaction of time and no tenure system status also suggests that hazards may not be proportional across strata.
+The model reveals other important predcitors, including the subject's main job and possible interactions between institution type and public/private status.
 
 #### Interval Censored Data Model
 
@@ -355,7 +300,7 @@ The data used in this study not only have right censoring, they are interval cen
 
 We'll follow the same model development approach as in the last specification. We'll try to develop a complex model using training data and then apply this model to test data.
 
-Using thsi method does not require the assumption that the subject enters the study midway through the previous wave. It only depends on the interval itself. I suspect this is related to the fact that Cox models do not require the time of occurance, only the order in which events took place.
+Using this method does not require the assumption that the subject enters the study midway through the previous wave. It only depends on the interval itself. I suspect this is related to the fact that Cox models do not require the time of occurance, only the order in which events took place.
 
 ``` r
 IC_Mod1 <- ic_sp(Surv(lower, upper, type = "interval2") ~ NTT + NTS, model = "ph", 
@@ -364,21 +309,21 @@ summary(IC_Mod1)
 ```
 
 ``` r
-IC_Mod2 <- ic_sp(Surv(lower, upper, type = "interval2") ~ NTT + NTS + DEG2ENTRY + 
+IC_Mod1 <- ic_sp(Surv(lower, upper, type = "interval2") ~ NTT + NTS + DEG2ENTRY + 
     EntryWAPRI + EntryWKTRNI + EntryPUBPRI + EntryEMTP + EntryPUBPRI * EntryEMTP + 
     SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + EntryCHLVIN + EntryCTZUSIN, 
     model = "ph", bs_samples = 100, data = test)
-summary(IC_Mod2)
+summary(IC_Mod1)
 ```
 
 ``` r
 # This is time-intensive at bs_samples=10, maybe a minute per sample.
-IC_Mod3 <- ic_sp(Surv(lower, upper, type = "interval2") ~ NTT + NTS + DEG2ENTRY + 
+IC_Mod2 <- ic_sp(Surv(lower, upper, type = "interval2") ~ NTT + NTS + DEG2ENTRY + 
     EntryWAPRI + EntryWKTRNI + EntryPUBPRI + EntryEMTP + EntryPUBPRI * EntryEMTP + 
     EntryPUBPRI * EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + 
     EntryCHLVIN + EntryCTZUSIN + TIME * NTT + TIME * NTS, model = "ph", bs_samples = 10, 
     data = data)
-summary(IC_Mod3)
+summary(IC_Mod2)
 # Also, this model is wrong because there should not be a coefficient
 # produced for time.  Furthermore, that coefficient sops up all the
 # variation in event times
@@ -390,34 +335,9 @@ If the proportional hazards assumption holds, then it is possible to estimate th
 
 ### Accelerated Failure Time Models
 
-Next, we fit a parametric survival regression model. These are location-scale models for an arbitrary transform of the time variable; the most common cases use a log transformation, leading to accelerated failure time (AFT) models. First, we assume the outcome has an exponential distribution--a good baseline distribution to start with (simplifies calculations). The exponential distribution implies a constant hazard rate. I also model with the log-logistic transformation. This is one of the more popular transformations because, unlike the Weibull distribution, it can exhibit a non-monotonic hazard function which increases at early times and decreases at later times. It also has a closed form solution that speeds up computation (important because of the consequences of censoring). The advantage of the Weibull (and by extention the exponential), of course, is that it can be parameterised as a PH model or an AFT model. In other words, the Weibull family can be interpreted as affecting the risk of event occurance or the duration of the lifespan. Other potential functions include log normal, gamma and inverse gaussian functions.
+First, we assume the outcome has an exponential distribution--a good baseline distribution to start with (simplifies calculations). The exponential distribution implies a constant hazard rate. The advantage of the Weibull (and by extention the exponential), is that it can be parameterised as a PH model or an AFT model. In other words, the Weibull family can be interpreted as affecting the risk of event occurance or the duration of the lifespan.
 
 For fully parameterized models, the timing of an event matters (unlike the cox models that only require the order). So here we must also make an assumption that subject begin their academic work midway through the previous interval. So we add unity to the upper and lower interval bounds to adjust for this.
-
-``` r
-exp.mod <- survreg(Surv(lower + 1, upper + 1, type = "interval2") ~ EntryTENSTA + 
-    EntryAGE, data = data, dist = "exponential")
-```
-
-For this first model, we parameterized log(t) using the exponential distribution. In the case of the exponential distribution, there is one extra parameter that allows *ϵ* to take on one of the extreme value distributions:
-
-*f*(*ϵ*)=*e*<sup>(*ϵ* − *e*<sup>*ϵ*</sup>)</sup>
-
-In the case of AFT models, covariates are interpreted as having a multiplicative effect on the survival time (the expected life span) of an individual. So, NTT status has a slope of -1.1321606 in the simple model above. This means that beginning in a non-tenure track position causes time to attrition to change by -67.7663932 percent. The expected time spent in academia before leaving, in other words, is lower for those starting in non-tenure track. Faculty beginning in no-tenure systems tend to spend even less time in academia -77.7773762 percent, compared to their tenure-track peers. In both cases, the life course is "accelerated."
-
-We can also examine the coefficient for job-entry age. For a one unit increase in age, we expect a 0.7704377 percent change in survival time. Because the coefficient is so small, you can actually just multiply the coefficient by 100 to find an approximation of the percentage change. An increase in age "decelerates" the life course, thereby increasing the total expected time span spent in academia.
-
-Because the exponential distribution is a special case of the Weibull family, we can interpret the coefficients as changes in the hazard (as we did for cox models). While this is a good baseline, the log logistic transformation is sometimes more commonly used, thanks to its computational efficiently and (relative) flexibility of functional form. For the log-logistic parameterization, the errors are scaled as follows:
-
-Now let's estimate a log logistic model. We'll use the same specification, but allow epsilon to take on a slightly different density:
-*f*(*ϵ*)=*e*<sup>*ϵ*</sup>/(1 + *e*<sup>*ϵ*</sup>)<sup>2</sup>
-
-``` r
-ll.mod <- survreg(Surv(lower + 1, upper + 1, type = "interval2") ~ EntryTENSTA + 
-    EntryAGE, data = data, dist = "loglogistic")
-```
-
-In this case, the log logistic performs similarly to the exponential distribution, both in terms of fit and coefficient estimates. The simple curvature of the survival curves in this study makes both of these distributions similar. I'll opt for the exponential because it fits well, it is simpler and it can be interpreted in the same paradigm as before. We'll also fit the full model with robust standard errors.
 
 #### Mathematics
 
@@ -431,16 +351,37 @@ In this case, the log logistic performs similarly to the exponential distributio
 5.  Solve using, typically, the Newton-Raphson algorithm
 
 ``` r
-AFT_mod <- survreg(Surv(lower + 1, upper + 1, type = "interval2") ~ NTT + NTS + 
+Exp_mod <- survreg(Surv(lower + 1, upper + 1, type = "interval2") ~ NTT + NTS + 
     DEG2ENTRY + EntryWAPRI + EntryWKTRNI + EntryPUBPRI + EntryEMTP + EntryPUBPRI * 
     EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + EntryCHLVIN + 
     EntryCTZUSIN, data = test, dist = "exponential", robust = TRUE)
 ```
 
+``` r
+loglog_mod <- survreg(Surv(lower + 1, upper + 1, type = "interval2") ~ NTT + 
+    NTS + DEG2ENTRY + EntryWAPRI + EntryWKTRNI + EntryPUBPRI + EntryEMTP + EntryPUBPRI * 
+    EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + EntryCHLVIN + 
+    EntryCTZUSIN, data = test, dist = "loglogistic", robust = TRUE)
+```
+
+``` r
+summary(Exp_mod)$loglik[2]
+```
+
+    ## [1] -4127.559
+
+``` r
+summary(loglog_mod)$loglik[2]
+```
+
+    ## [1] -4039.913
+
+Because the log-likelihood is higher (less negative), the log logistic model actually fits the data better. The higher logliklihood simply means that that the probability of the data is marginally closer to 1 (certitude). However, the exponential distribution fits the data similarly. In addition, parameterizing log(time) as an exponential function allows me to convert coefficients to hazards ratios. I can therefore compare the results to the findings of the cox models. As the final analysis will be a cox model, I use the exponential AFT for validation purposes.
+
 ### AFT Specification
 
 ``` r
-table <- as.data.frame(summary(AFT_mod)$table)
+table <- as.data.frame(summary(Exp_mod)$table)
 rownames(table) <- c("Intercept", "Non-tenure Track", "No Tenure System", "Time between Degree and Job", 
     "Administration/Other", "Research", "Workplace Training", "Private Control", 
     "Two-year", "Medical", "Research Institute", "PhD Research II", "PhD Doctorate Institution", 
@@ -533,7 +474,9 @@ kable(ctable)
 | Private x Medical            |   1.178| 0.24      | 1.186     | 0.218        | 1.179     | 0.255        |
 | Private x Research Institute |   1.338| 0.102     | 1.346     | 0.08         | 1.323     | 0.12         |
 
-COMPARING RC and IC models. Again, these models differ slightly. The Right censored (RC) model includes the time interaction with tenure status, but it fails to deal with the interval censoring of the data and assume every individual entered his or her job midway through the previous interval. The Interval censored (IC) model effectivey handles the interval censoring, but it does not allow for an interaction between time and tenure status. Nevertheless, the results are comparable.
+The results of the AFT model (exponential) look similar to the results from the cox models. This helps to validate the findings.
+
+Comparing the RC and IC models, we see that the models differ slightly. The Right censored (RC) model includes the time interaction with tenure status, but it fails to deal with the interval censoring of the data and assume every individual entered his or her job midway through the previous interval. The Interval censored (IC) model effectivey handles the interval censoring, but it does not allow for an interaction between time and tenure status. Nevertheless, the results are comparable.
 
 The fit statistics of these two models is difficult to reconcile. The RC model has an Rsquare of 0.047. The log likelihood is listed as -1.013048210^{4}, -9939.400298. I'm not sure what two numbers mean. Perhaps one is only for the intercept? The IC model reports a log likelihood of -3639.0884452, which is considerably different from the RC model.
 
