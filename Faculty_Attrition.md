@@ -393,33 +393,6 @@ aft_table <- round(table[, c("Value", "expCoef", "Robust SE", "z", "p")], 3)
 kable(aft_table)
 ```
 
-|                              |   Value|  expCoef|  Robust SE|        z|      p|
-|------------------------------|-------:|--------:|----------:|--------:|------:|
-| Intercept                    |   4.319|   75.129|      0.211|   20.478|  0.000|
-| Non-tenure Track             |  -0.937|    0.392|      0.102|   -9.154|  0.000|
-| No Tenure System             |  -1.086|    0.338|      0.091|  -11.942|  0.000|
-| Time between Degree and Job  |  -0.001|    0.999|      0.017|   -0.032|  0.975|
-| Administration/Other         |  -0.471|    0.624|      0.105|   -4.471|  0.000|
-| Research                     |  -0.390|    0.677|      0.090|   -4.333|  0.000|
-| Workplace Training           |  -0.027|    0.974|      0.061|   -0.440|  0.660|
-| Private Control              |   0.060|    1.062|      0.090|    0.664|  0.506|
-| Two-year                     |   0.214|    1.239|      0.239|    0.897|  0.370|
-| Medical                      |  -0.170|    0.844|      0.098|   -1.726|  0.084|
-| Research Institute           |  -0.066|    0.936|      0.110|   -0.603|  0.546|
-| PhD Research II              |  -0.159|    0.853|      0.099|   -1.615|  0.106|
-| PhD Doctorate Institution    |  -0.114|    0.892|      0.102|   -1.127|  0.260|
-| PhD Other                    |  -0.257|    0.774|      0.211|   -1.214|  0.225|
-| PhD Medical/Health           |  -0.105|    0.901|      0.138|   -0.755|  0.450|
-| Age                          |   0.005|    1.005|      0.005|    0.976|  0.329|
-| Female                       |   0.035|    1.036|      0.061|    0.572|  0.567|
-| Minority                     |  -0.020|    0.980|      0.079|   -0.252|  0.801|
-| Married                      |   0.100|    1.106|      0.072|    1.394|  0.163|
-| Parent                       |   0.017|    1.017|      0.073|    0.226|  0.821|
-| Citizen                      |   0.065|    1.068|      0.070|    0.937|  0.349|
-| Private x Two-Year           |  -1.349|    0.259|      0.424|   -3.185|  0.001|
-| Private x Medical            |  -0.164|    0.848|      0.140|   -1.174|  0.240|
-| Private x Research Institute |  -0.291|    0.748|      0.178|   -1.635|  0.102|
-
 The exponential distribution has a constant hazard *λ*(*t*)=*λ* and thus a survival function of *S*(*t*)=*e*<sup>−*λ*(*t*)</sup> and density of *f*(*t*)=*λ* × *e*<sup>−*λ*(*t*)</sup>. An interesting occurance is that the expected survival time for this distribution is *E*(*t*)=1/*λ* and its variance is *E*(*t*)=1/*λ*<sup>2</sup>. This makes the mean survival time equal to e^intercept (75.1287755). It's inverse (0.0133105) is the MLE of the (constant) hazard rate. Of course, the model performs poorly extrapolating to such an extreme timepoint.
 
 AFT models are typcally interpreted in a way that covariates have a multiplicative effect on the expected survival time. So, with regard to tenure status, taking your first job as NTT accelerates the time to attrition by a factor of 0.3919478 (0.3919478 times shorter survival time compared to the baseline survival). Beginning an academic career in a non-tenure system accelerates the time to attrition by a factor of 0.3377075. The life course for these states is -60.8052173 and -66.229245 percent shorter, respectively.
