@@ -22,12 +22,12 @@ Contents
 -   [Cox Proportional Hazards Model](#cox-proportional-hazards-model)
     -   [Right Censored Data Model](#right-censored-data-model)
     -   [Interval Censored Data Model](#interval-censored-data-model)
-    -   [Comparing Right Censored Model and Interval Censored Model](#comparing-right-censored-model-and-interval-censored-model)
 -   [Accelerated Failure Time Models](#accelerated-failure-time-models)
     -   Exponential
     -   Lognormal
     -   [AFT Specification](#aft-specification)
 -   [Comparing the Exponential AFT Model and the Cox Models](#comparing-the-exponential-aft-model-and-the-cox-models)
+-   [Final Model](#final-model)
 -   [Conclusions](#conclusions)
 
 Configure
@@ -253,18 +253,13 @@ The most common semiparametric method is the Cox Proportional Hazards Model. The
 
 Cox models work mathematically because, when hazards are proportional, it is possible to factor the Likelihood function into a part with betas and a part with betas and the baseline hazard function. We sacrifice the information of part two and use the standard likelihood approach to estimate the betas in part one (which is consistent and asymptotically normal). This approach is not fully efficient, but we gain flexibilty with functional form when we do this (making estimates more robust). It turns out that estimating part one only requires knowing the order in which events took place.
 
-Mathematically, the (partial) likelihood function is expressed as follows:
-$$PL = \\prod\_{k=1}^{K}L\_k = \\prod\_{k=1}^{K}\\dfrac{h\_k(t\_k)}{\\sum\_{j \\in R(t\_k)}h\_j(t\_k)}$$
+Mathematically, the (partial) likelihood function is expressed as follows: $PL = \\prod\_{k=1}^{K}L\_k = \\prod\_{k=1}^{K}\\dfrac{h\_k(t\_k)}{\\sum\_{j \\in R(t\_k)}h\_j(t\_k)}$
 
 To clarify, K is the total number of events experienced in the sample. R(t\_k) is the risk set (i.e., all the individuals who remain at risk of event occurance, tj ≥ tk). As in traditional maximum likelihood, we iteratively choose the set of parameters that maximize PL (the partial likelihood value associated with the observed values).
 
-Consider a set of 10 individuals. Assume 7 of them experience events and 3 do not. First we order the set by the time of event occurance or censoring. This establishes the rank order of event times. Then we calculate the partial likelihood with respect to each person who experiences an event. The first likelihood would be
-$$\\dfrac{e^{\\beta X\_1}}{e^{\\beta X\_2}+e^{\\beta X\_3}+...+e^{\\beta X\_10}}$$
-.
+Consider a set of 10 individuals. Assume 7 of them experience events and 3 do not. First we order the set by the time of event occurance or censoring. This establishes the rank order of event times. Then we calculate the partial likelihood with respect to each person who experiences an event. The first likelihood would be $\\dfrac{e^{\\beta X\_1}}{e^{\\beta X\_2}+e^{\\beta X\_3}+...+e^{\\beta X\_10}}$.
 
-The second rank ordered person's likelihood would be
-$$\\dfrac{e^{\\beta X\_2}}{e^{\\beta X\_3}+e^{\\beta X\_4}+...+e^{\\beta X\_10}}$$
-.
+The second rank ordered person's likelihood would be $\\dfrac{e^{\\beta X\_2}}{e^{\\beta X\_3}+e^{\\beta X\_4}+...+e^{\\beta X\_10}}$.
 
 Censored observations would not contribute a likelhood because they did not experience an event. Censoring is accomodated, however, in that they influence the denominator in the likelihoods of individuals who did experience an event. Again, it is important to point out that, because of the factorization, the partial likelihood does not depend on the specific time at which events occurred. It only depends on the order of event occurance.
 
@@ -298,28 +293,6 @@ RC_Mod1 <- coxph(Surv(TIME2, Censor) ~ NTT + NTS, data = test, method = "efron")
 summary(RC_Mod1)
 ```
 
-    ## Call:
-    ## coxph(formula = Surv(TIME2, Censor) ~ NTT + NTS, data = test, 
-    ##     method = "efron")
-    ## 
-    ##   n= 8575, number of events= 1362 
-    ## 
-    ##        coef exp(coef) se(coef)     z Pr(>|z|)    
-    ## NTT 1.00893   2.74265  0.09565 10.55   <2e-16 ***
-    ## NTS 1.32374   3.75745  0.07982 16.59   <2e-16 ***
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ##     exp(coef) exp(-coef) lower .95 upper .95
-    ## NTT     2.743     0.3646     2.274     3.308
-    ## NTS     3.757     0.2661     3.213     4.394
-    ## 
-    ## Concordance= 0.637  (se = 0.008 )
-    ## Rsquare= 0.04   (max possible= 0.935 )
-    ## Likelihood ratio test= 353.4  on 2 df,   p=0
-    ## Wald test            = 276.6  on 2 df,   p=0
-    ## Score (logrank) test = 313.6  on 2 df,   p=0
-
 Proportional Hazards models and AFT models must be interpreted in different ways. AFT models give the percentage change in survival time. Cox PH models give the percentage change to the hazard at all time points, following this formula: *h*(*t*)=*h*<sub>0</sub>(*t*)*e*<sup>(*β*′*x*)</sup>
 
 In this case, the effect of initial tenure status on time to attrition has an estimated coefficient of 1.0089259 and 1.3237404. Exponentiated, this means that subjects appointed to lower tenure-status jobs multiply their baseline hazards *h*<sub>0</sub>(*t*) by a factor of 2.7426537 and 3.7574493. Their "risk"" of attriting from academia is 174.2653671 and 275.744933 percent higher than academics who begin immediately on the tenure-track. Importantly, Cox models state that this is the impact on the subject's hazard at any given time, t. It does not, however, imply an expansion (or contraction) of the lifespan of the subject.
@@ -334,159 +307,6 @@ RC_Mod2 <- coxph(Surv(TIME2, Censor) ~ NTT + NTS + DEG2ENTRY + EntryWAPRI +
     t, ...) x * log(t))
 summary(RC_Mod2)
 ```
-
-    ## Call:
-    ## coxph(formula = Surv(TIME2, Censor) ~ NTT + NTS + DEG2ENTRY + 
-    ##     EntryWAPRI + EntryWKTRNI + EntryPUBPRI + EntryEMTP + EntryPUBPRI * 
-    ##     EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + 
-    ##     EntryCHLVIN + EntryCTZUSIN + tt(NTT) + tt(NTS), data = test, 
-    ##     robust = TRUE, tt = function(x, t, ...) x * log(t), method = "efron")
-    ## 
-    ##   n= 7905, number of events= 1190 
-    ##    (670 observations deleted due to missingness)
-    ## 
-    ##                                                         coef exp(coef)
-    ## NTT                                                 1.050756  2.859812
-    ## NTS                                                 1.242949  3.465820
-    ## DEG2ENTRY                                          -0.021551  0.978680
-    ## EntryWAPRIOther                                     0.486410  1.626466
-    ## EntryWAPRIResearch                                  0.436570  1.547390
-    ## EntryWKTRNITraining                                 0.021265  1.021492
-    ## EntryPUBPRIPrivate                                 -0.060413  0.941376
-    ## EntryEMTPTwo-year                                  -0.168894  0.844598
-    ## EntryEMTPMed                                        0.127429  1.135904
-    ## EntryEMTPUni Research Institute                     0.051707  1.053067
-    ## SDRCARNR2                                           0.138130  1.148125
-    ## SDRCARNDoctorate                                    0.100120  1.105303
-    ## SDRCARNOther                                        0.229712  1.258237
-    ## SDRCARNMedHealth                                    0.076845  1.079875
-    ## EntryAGE                                           -0.004249  0.995760
-    ## GENDERFemale                                       -0.078362  0.924630
-    ## MINRTYYes                                           0.026342  1.026692
-    ## EntryMARINDYes                                     -0.090126  0.913816
-    ## EntryCHLVINYes                                     -0.006429  0.993591
-    ## EntryCTZUSINCitizen                                 0.058315  1.060049
-    ## tt(NTT)                                            -0.199849  0.818854
-    ## tt(NTS)                                            -0.345253  0.708041
-    ## EntryPUBPRIPrivate:EntryEMTPTwo-year                1.084622  2.958321
-    ## EntryPUBPRIPrivate:EntryEMTPMed                     0.170195  1.185537
-    ## EntryPUBPRIPrivate:EntryEMTPUni Research Institute  0.297362  1.346303
-    ##                                                     se(coef) robust se
-    ## NTT                                                 0.142225  0.139420
-    ## NTS                                                 0.127150  0.123364
-    ## DEG2ENTRY                                           0.016889  0.017496
-    ## EntryWAPRIOther                                     0.105574  0.102241
-    ## EntryWAPRIResearch                                  0.091283  0.087047
-    ## EntryWKTRNITraining                                 0.059346  0.059029
-    ## EntryPUBPRIPrivate                                  0.087221  0.087645
-    ## EntryEMTPTwo-year                                   0.234258  0.236871
-    ## EntryEMTPMed                                        0.097365  0.097210
-    ## EntryEMTPUni Research Institute                     0.107171  0.106534
-    ## SDRCARNR2                                           0.096694  0.096822
-    ## SDRCARNDoctorate                                    0.098305  0.098070
-    ## SDRCARNOther                                        0.206401  0.208361
-    ## SDRCARNMedHealth                                    0.140849  0.141829
-    ## EntryAGE                                            0.005181  0.005068
-    ## GENDERFemale                                        0.059659  0.059419
-    ## MINRTYYes                                           0.076835  0.076643
-    ## EntryMARINDYes                                      0.069745  0.070267
-    ## EntryCHLVINYes                                      0.070845  0.070647
-    ## EntryCTZUSINCitizen                                 0.069132  0.068481
-    ## tt(NTT)                                             0.116969  0.113868
-    ## tt(NTS)                                             0.099629  0.098430
-    ## EntryPUBPRIPrivate:EntryEMTPTwo-year                0.476484  0.481549
-    ## EntryPUBPRIPrivate:EntryEMTPMed                     0.137364  0.138026
-    ## EntryPUBPRIPrivate:EntryEMTPUni Research Institute  0.169968  0.169697
-    ##                                                         z Pr(>|z|)    
-    ## NTT                                                 7.537 4.82e-14 ***
-    ## NTS                                                10.075  < 2e-16 ***
-    ## DEG2ENTRY                                          -1.232 0.218043    
-    ## EntryWAPRIOther                                     4.757 1.96e-06 ***
-    ## EntryWAPRIResearch                                  5.015 5.29e-07 ***
-    ## EntryWKTRNITraining                                 0.360 0.718669    
-    ## EntryPUBPRIPrivate                                 -0.689 0.490641    
-    ## EntryEMTPTwo-year                                  -0.713 0.475832    
-    ## EntryEMTPMed                                        1.311 0.189903    
-    ## EntryEMTPUni Research Institute                     0.485 0.627425    
-    ## SDRCARNR2                                           1.427 0.153684    
-    ## SDRCARNDoctorate                                    1.021 0.307302    
-    ## SDRCARNOther                                        1.102 0.270258    
-    ## SDRCARNMedHealth                                    0.542 0.587945    
-    ## EntryAGE                                           -0.838 0.401872    
-    ## GENDERFemale                                       -1.319 0.187233    
-    ## MINRTYYes                                           0.344 0.731076    
-    ## EntryMARINDYes                                     -1.283 0.199625    
-    ## EntryCHLVINYes                                     -0.091 0.927486    
-    ## EntryCTZUSINCitizen                                 0.852 0.394461    
-    ## tt(NTT)                                            -1.755 0.079242 .  
-    ## tt(NTS)                                            -3.508 0.000452 ***
-    ## EntryPUBPRIPrivate:EntryEMTPTwo-year                2.252 0.024300 *  
-    ## EntryPUBPRIPrivate:EntryEMTPMed                     1.233 0.217550    
-    ## EntryPUBPRIPrivate:EntryEMTPUni Research Institute  1.752 0.079720 .  
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ##                                                    exp(coef) exp(-coef)
-    ## NTT                                                   2.8598     0.3497
-    ## NTS                                                   3.4658     0.2885
-    ## DEG2ENTRY                                             0.9787     1.0218
-    ## EntryWAPRIOther                                       1.6265     0.6148
-    ## EntryWAPRIResearch                                    1.5474     0.6462
-    ## EntryWKTRNITraining                                   1.0215     0.9790
-    ## EntryPUBPRIPrivate                                    0.9414     1.0623
-    ## EntryEMTPTwo-year                                     0.8446     1.1840
-    ## EntryEMTPMed                                          1.1359     0.8804
-    ## EntryEMTPUni Research Institute                       1.0531     0.9496
-    ## SDRCARNR2                                             1.1481     0.8710
-    ## SDRCARNDoctorate                                      1.1053     0.9047
-    ## SDRCARNOther                                          1.2582     0.7948
-    ## SDRCARNMedHealth                                      1.0799     0.9260
-    ## EntryAGE                                              0.9958     1.0043
-    ## GENDERFemale                                          0.9246     1.0815
-    ## MINRTYYes                                             1.0267     0.9740
-    ## EntryMARINDYes                                        0.9138     1.0943
-    ## EntryCHLVINYes                                        0.9936     1.0065
-    ## EntryCTZUSINCitizen                                   1.0600     0.9434
-    ## tt(NTT)                                               0.8189     1.2212
-    ## tt(NTS)                                               0.7080     1.4123
-    ## EntryPUBPRIPrivate:EntryEMTPTwo-year                  2.9583     0.3380
-    ## EntryPUBPRIPrivate:EntryEMTPMed                       1.1855     0.8435
-    ## EntryPUBPRIPrivate:EntryEMTPUni Research Institute    1.3463     0.7428
-    ##                                                    lower .95 upper .95
-    ## NTT                                                   2.1760    3.7585
-    ## NTS                                                   2.7214    4.4138
-    ## DEG2ENTRY                                             0.9457    1.0128
-    ## EntryWAPRIOther                                       1.3311    1.9873
-    ## EntryWAPRIResearch                                    1.3047    1.8352
-    ## EntryWKTRNITraining                                   0.9099    1.1468
-    ## EntryPUBPRIPrivate                                    0.7928    1.1178
-    ## EntryEMTPTwo-year                                     0.5309    1.3436
-    ## EntryEMTPMed                                          0.9389    1.3743
-    ## EntryEMTPUni Research Institute                       0.8546    1.2976
-    ## SDRCARNR2                                             0.9497    1.3880
-    ## SDRCARNDoctorate                                      0.9120    1.3395
-    ## SDRCARNOther                                          0.8364    1.8929
-    ## SDRCARNMedHealth                                      0.8178    1.4259
-    ## EntryAGE                                              0.9859    1.0057
-    ## GENDERFemale                                          0.8230    1.0388
-    ## MINRTYYes                                             0.8835    1.1931
-    ## EntryMARINDYes                                        0.7962    1.0487
-    ## EntryCHLVINYes                                        0.8651    1.1411
-    ## EntryCTZUSINCitizen                                   0.9269    1.2123
-    ## tt(NTT)                                               0.6551    1.0236
-    ## tt(NTS)                                               0.5838    0.8587
-    ## EntryPUBPRIPrivate:EntryEMTPTwo-year                  1.1512    7.6022
-    ## EntryPUBPRIPrivate:EntryEMTPMed                       0.9045    1.5538
-    ## EntryPUBPRIPrivate:EntryEMTPUni Research Institute    0.9654    1.8775
-    ## 
-    ## Concordance= 0.665  (se = 0.016 )
-    ## Rsquare= 0.047   (max possible= 0.923 )
-    ## Likelihood ratio test= 382.2  on 25 df,   p=0
-    ## Wald test            = 299.5  on 25 df,   p=0
-    ## Score (logrank) test = 343.6  on 25 df,   p=0,   Robust = 386.6  p=0
-    ## 
-    ##   (Note: the likelihood ratio and score tests assume independence of
-    ##      observations within a cluster, the Wald and robust score tests do not).
 
 Even after controlling for background characteristics, there are significant differences. Here, NTT status or working at a college or university without a tenure system impacts the hazard, multiplying the baseline by a factor of 2.8598117 and 3.4658201. This is equivalent to saying that each tenure status increases the hazard of attrition by 185.9811676 and 246.5820096 percent, controlling for background characteristics. R output also provides the exponentiated negative coefficient. To my understanding, that just allows you to compare the groups relative to the baseline hazard of the tenure-track group. Robust standard errors were used in this model.
 
@@ -543,20 +363,6 @@ IC_Mod1 <- ic_sp(Surv(lower, upper, type = "interval2") ~ NTT + NTS, model = "ph
 summary(IC_Mod1)
 ```
 
-    ## 
-    ## Model:  Cox PH
-    ## Baseline:  semi-parametric 
-    ## Call: ic_sp(formula = Surv(lower, upper, type = "interval2") ~ NTT + 
-    ##     NTS, data = data, model = "ph", bs_samples = 100)
-    ## 
-    ##     Estimate Exp(Est) Std.Error z-value p
-    ## NTT    1.156    3.177   0.05737   20.15 0
-    ## NTS    1.516    4.555   0.05209   29.11 0
-    ## 
-    ## final llk =  -10106.08 
-    ## Iterations =  27 
-    ## Bootstrap Samples =  100
-
 ``` r
 IC_Mod2 <- ic_sp(Surv(lower, upper, type = "interval2") ~ NTT + NTS + DEG2ENTRY + 
     EntryWAPRI + EntryWKTRNI + EntryPUBPRI + EntryEMTP + EntryPUBPRI * EntryEMTP + 
@@ -564,92 +370,6 @@ IC_Mod2 <- ic_sp(Surv(lower, upper, type = "interval2") ~ NTT + NTS + DEG2ENTRY 
     model = "ph", bs_samples = 100, data = test)
 summary(IC_Mod2)
 ```
-
-    ## 
-    ## Model:  Cox PH
-    ## Baseline:  semi-parametric 
-    ## Call: ic_sp(formula = Surv(lower, upper, type = "interval2") ~ NTT + 
-    ##     NTS + DEG2ENTRY + EntryWAPRI + EntryWKTRNI + EntryPUBPRI + 
-    ##     EntryEMTP + EntryPUBPRI * EntryEMTP + SDRCARN + EntryAGE + 
-    ##     GENDER + MINRTY + EntryMARIND + EntryCHLVIN + EntryCTZUSIN, 
-    ##     data = test, model = "ph", bs_samples = 100)
-    ## 
-    ##                                                      Estimate Exp(Est)
-    ## NTT                                                 0.9620000   2.6170
-    ## NTS                                                 1.1070000   3.0250
-    ## DEG2ENTRY                                          -0.0007627   0.9992
-    ## EntryWAPRIOther                                     0.4588000   1.5820
-    ## EntryWAPRIResearch                                  0.3826000   1.4660
-    ## EntryWKTRNITraining                                 0.0086660   1.0090
-    ## EntryPUBPRIPrivate                                 -0.0678400   0.9344
-    ## EntryEMTPTwo-year                                  -0.2166000   0.8052
-    ## EntryEMTPMed                                        0.1372000   1.1470
-    ## EntryEMTPUni Research Institute                     0.0459500   1.0470
-    ## SDRCARNR2                                           0.1606000   1.1740
-    ## SDRCARNDoctorate                                    0.1026000   1.1080
-    ## SDRCARNOther                                        0.2810000   1.3240
-    ## SDRCARNMedHealth                                    0.0885100   1.0930
-    ## EntryAGE                                           -0.0071180   0.9929
-    ## GENDERFemale                                       -0.0341300   0.9664
-    ## MINRTYYes                                           0.0074100   1.0070
-    ## EntryMARINDYes                                     -0.0946700   0.9097
-    ## EntryCHLVINYes                                     -0.0250200   0.9753
-    ## EntryCTZUSINCitizen                                -0.0776900   0.9253
-    ## EntryPUBPRIPrivate:EntryEMTPTwo-year                1.1910000   3.2920
-    ## EntryPUBPRIPrivate:EntryEMTPMed                     0.1644000   1.1790
-    ## EntryPUBPRIPrivate:EntryEMTPUni Research Institute  0.2798000   1.3230
-    ##                                                    Std.Error  z-value
-    ## NTT                                                 0.090890 10.58000
-    ## NTS                                                 0.087350 12.67000
-    ## DEG2ENTRY                                           0.018310 -0.04166
-    ## EntryWAPRIOther                                     0.097340  4.71400
-    ## EntryWAPRIResearch                                  0.086160  4.44100
-    ## EntryWKTRNITraining                                 0.058350  0.14850
-    ## EntryPUBPRIPrivate                                  0.091520 -0.74130
-    ## EntryEMTPTwo-year                                   0.233400 -0.92800
-    ## EntryEMTPMed                                        0.086250  1.59100
-    ## EntryEMTPUni Research Institute                     0.103000  0.44620
-    ## SDRCARNR2                                           0.106800  1.50300
-    ## SDRCARNDoctorate                                    0.088850  1.15500
-    ## SDRCARNOther                                        0.232800  1.20700
-    ## SDRCARNMedHealth                                    0.132500  0.66790
-    ## EntryAGE                                            0.005012 -1.42000
-    ## GENDERFemale                                        0.065940 -0.51750
-    ## MINRTYYes                                           0.080430  0.09214
-    ## EntryMARINDYes                                      0.068410 -1.38400
-    ## EntryCHLVINYes                                      0.065880 -0.37980
-    ## EntryCTZUSINCitizen                                 0.070860 -1.09600
-    ## EntryPUBPRIPrivate:EntryEMTPTwo-year                1.528000  0.77960
-    ## EntryPUBPRIPrivate:EntryEMTPMed                     0.142900  1.15000
-    ## EntryPUBPRIPrivate:EntryEMTPUni Research Institute  0.169800  1.64800
-    ##                                                            p
-    ## NTT                                                0.000e+00
-    ## NTS                                                0.000e+00
-    ## DEG2ENTRY                                          9.668e-01
-    ## EntryWAPRIOther                                    2.430e-06
-    ## EntryWAPRIResearch                                 8.943e-06
-    ## EntryWKTRNITraining                                8.819e-01
-    ## EntryPUBPRIPrivate                                 4.585e-01
-    ## EntryEMTPTwo-year                                  3.534e-01
-    ## EntryEMTPMed                                       1.116e-01
-    ## EntryEMTPUni Research Institute                    6.554e-01
-    ## SDRCARNR2                                          1.327e-01
-    ## SDRCARNDoctorate                                   2.482e-01
-    ## SDRCARNOther                                       2.274e-01
-    ## SDRCARNMedHealth                                   5.042e-01
-    ## EntryAGE                                           1.555e-01
-    ## GENDERFemale                                       6.048e-01
-    ## MINRTYYes                                          9.266e-01
-    ## EntryMARINDYes                                     1.664e-01
-    ## EntryCHLVINYes                                     7.041e-01
-    ## EntryCTZUSINCitizen                                2.729e-01
-    ## EntryPUBPRIPrivate:EntryEMTPTwo-year               4.356e-01
-    ## EntryPUBPRIPrivate:EntryEMTPMed                    2.501e-01
-    ## EntryPUBPRIPrivate:EntryEMTPUni Research Institute 9.938e-02
-    ## 
-    ## final llk =  -3639.088 
-    ## Iterations =  25 
-    ## Bootstrap Samples =  100
 
 ``` r
 # This is time-intensive at bs_samples=10, maybe a minute per sample.
@@ -664,55 +384,9 @@ summary(IC_Mod3)
 # variation in event times
 ```
 
-Now let's compare the results of the first model treating the data as right censored and the results when treating the data as interval censored (and also right censored).
-
-#### Comparing Right Censored Model and Interval Censored Model
-
-``` r
-space <- c("", "")
-temp <- rbind(IC_cox_table[1:20, c(2, 5)], space, space, IC_cox_table[21:23, 
-    c(2, 5)])
-cox_compare <- data.frame(cbind(RC_cox_table[, c(2, 6)], temp))
-rownames(cox_compare) <- rownames(RC_cox_table)
-colnames(cox_compare) <- c("RC Cox: HR", "RC Cox pval", "IC Cox: HR", "IC Cox pval")
-kable(cox_compare)
-```
-
-|                              |  RC Cox: HR|  RC Cox pval| IC Cox: HR | IC Cox pval |
-|------------------------------|-----------:|------------:|:-----------|:------------|
-| Non-tenure Track (NTT)       |       2.860|        0.000| 2.617      | 0           |
-| No Tenure System             |       3.466|        0.000| 3.025      | 0           |
-| Time between Degree and Job  |       0.979|        0.218| 0.999      | 0.963       |
-| Admin/Other                  |       1.626|        0.000| 1.582      | 0           |
-| Researcher                   |       1.547|        0.000| 1.466      | 0           |
-| Workplace Training           |       1.021|        0.719| 1.009      | 0.876       |
-| Private Control              |       0.941|        0.491| 0.934      | 0.48        |
-| Two-year/Other               |       0.845|        0.476| 0.805      | 0.346       |
-| Medical                      |       1.136|        0.190| 1.147      | 0.175       |
-| Research Institute           |       1.053|        0.627| 1.047      | 0.682       |
-| PhD Research II              |       1.148|        0.154| 1.174      | 0.12        |
-| PhD Doctorate Institution    |       1.105|        0.307| 1.108      | 0.336       |
-| PhD Other                    |       1.258|        0.270| 1.324      | 0.22        |
-| PhD Medical/Health           |       1.080|        0.588| 1.093      | 0.492       |
-| Age                          |       0.996|        0.402| 0.993      | 0.177       |
-| Female                       |       0.925|        0.187| 0.966      | 0.571       |
-| Minority                     |       1.027|        0.731| 1.007      | 0.926       |
-| Married                      |       0.914|        0.200| 0.91       | 0.248       |
-| Children                     |       0.994|        0.927| 0.975      | 0.704       |
-| Citizen                      |       1.060|        0.394| 0.925      | 0.313       |
-| Time x NTT                   |       0.819|        0.079|            |             |
-| Time x No Tenure System      |       0.708|        0.000|            |             |
-| Private x Two-Year           |       2.958|        0.024| 3.292      | 0.007       |
-| Private x Medical            |       1.186|        0.218| 1.179      | 0.255       |
-| Private x Research Institute |       1.346|        0.080| 1.323      | 0.12        |
-
-Again, these models differ slightly. The Right censored (RC) model includes the time interaction with tenure status, but it fails to deal with the interval censoring of the data and assume every individual entered his or her job midway through the previous interval. The Interval censored (IC) model effectivey handles the interval censoring, but it does not allow for an interaction between time and tenure status. Nevertheless, the results are comparable.
-
-The fit statistics of these two models is difficult to reconcile. The RC model has an Rsquare of 0.047. The log likelihood is listed as -1.013048210^{4}, -9939.400298. I'm not sure what two numbers mean. Perhaps one is only for the intercept? The IC model reports a log likelihood of -3639.0884452, which is considerably different from the RC model.
-
 #### Summary of Cox Proportional Hazard Models
 
-If the proportional hazards assumption holds, then it is possible to estimate the effect of parameter(s) without any consideration of the baseline hazard function. As mentioned, this is in contrast to parametric models--the focus of our next section.
+If the proportional hazards assumption holds, then it is possible to estimate the effect of parameter(s) without any consideration of the baseline hazard function. As mentioned, this is in contrast to parametric models--the focus of our next section. Even when proportional hazards are not truly proportional, we can include an interaction between the variable and time to correct for it.
 
 ### Accelerated Failure Time Models
 
@@ -723,26 +397,7 @@ For fully parameterized models, the timing of an event matters (unlike the cox m
 ``` r
 exp.mod <- survreg(Surv(lower + 1, upper + 1, type = "interval2") ~ EntryTENSTA + 
     EntryAGE, data = data, dist = "exponential")
-summary(exp.mod)
 ```
-
-    ## 
-    ## Call:
-    ## survreg(formula = Surv(lower + 1, upper + 1, type = "interval2") ~ 
-    ##     EntryTENSTA + EntryAGE, data = data, dist = "exponential")
-    ##                                          Value Std. Error      z         p
-    ## (Intercept)                            4.14264     0.1064  38.92  0.00e+00
-    ## EntryTENSTANTT                        -1.13216     0.0612 -18.50  1.95e-76
-    ## EntryTENSTANon-tenure System/Position -1.50406     0.0514 -29.26 3.21e-188
-    ## EntryAGE                               0.00767     0.0027   2.84  4.53e-03
-    ## 
-    ## Scale fixed at 1 
-    ## 
-    ## Exponential distribution
-    ## Loglik(model)= -11584.1   Loglik(intercept only)= -12165
-    ##  Chisq= 1161.78 on 3 degrees of freedom, p= 0 
-    ## Number of Newton-Raphson Iterations: 6 
-    ## n= 21436
 
 For this first model, we parameterized log(t) using the exponential distribution. In the case of the exponential distribution, there is one extra parameter that allows *ϵ* to take on one of the extreme value distributions:
 
@@ -760,27 +415,7 @@ Now let's estimate a log logistic model. We'll use the same specification, but a
 ``` r
 ll.mod <- survreg(Surv(lower + 1, upper + 1, type = "interval2") ~ EntryTENSTA + 
     EntryAGE, data = data, dist = "loglogistic")
-summary(ll.mod)
 ```
-
-    ## 
-    ## Call:
-    ## survreg(formula = Surv(lower + 1, upper + 1, type = "interval2") ~ 
-    ##     EntryTENSTA + EntryAGE, data = data, dist = "loglogistic")
-    ##                                          Value Std. Error      z         p
-    ## (Intercept)                            3.45151    0.09169  37.65  0.00e+00
-    ## EntryTENSTANTT                        -1.00622    0.05076 -19.82  1.93e-87
-    ## EntryTENSTANon-tenure System/Position -1.34887    0.04215 -32.00 1.10e-224
-    ## EntryAGE                               0.00775    0.00233   3.33  8.71e-04
-    ## Log(scale)                            -0.32328    0.01323 -24.44 6.12e-132
-    ## 
-    ## Scale= 0.724 
-    ## 
-    ## Log logistic distribution
-    ## Loglik(model)= -11296.4   Loglik(intercept only)= -11959.6
-    ##  Chisq= 1326.38 on 3 degrees of freedom, p= 0 
-    ## Number of Newton-Raphson Iterations: 5 
-    ## n= 21436
 
 In this case, the log logistic performs similarly to the exponential distribution, both in terms of fit and coefficient estimates. The simple curvature of the survival curves in this study makes both of these distributions similar. I'll opt for the exponential because it fits well, it is simpler and it can be interpreted in the same paradigm as before. We'll also fit the full model with robust standard errors.
 
@@ -800,100 +435,7 @@ AFT_mod <- survreg(Surv(lower + 1, upper + 1, type = "interval2") ~ NTT + NTS +
     DEG2ENTRY + EntryWAPRI + EntryWKTRNI + EntryPUBPRI + EntryEMTP + EntryPUBPRI * 
     EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + EntryCHLVIN + 
     EntryCTZUSIN, data = test, dist = "exponential", robust = TRUE)
-summary(AFT_mod)
 ```
-
-    ## 
-    ## Call:
-    ## survreg(formula = Surv(lower + 1, upper + 1, type = "interval2") ~ 
-    ##     NTT + NTS + DEG2ENTRY + EntryWAPRI + EntryWKTRNI + EntryPUBPRI + 
-    ##         EntryEMTP + EntryPUBPRI * EntryEMTP + SDRCARN + EntryAGE + 
-    ##         GENDER + MINRTY + EntryMARIND + EntryCHLVIN + EntryCTZUSIN, 
-    ##     data = test, dist = "exponential", robust = TRUE)
-    ##                                                        Value Std. Err
-    ## (Intercept)                                         4.319204  0.21092
-    ## NTT                                                -0.936627  0.10232
-    ## NTS                                                -1.085575  0.09090
-    ## DEG2ENTRY                                          -0.000536  0.01686
-    ## EntryWAPRIOther                                    -0.470917  0.10534
-    ## EntryWAPRIResearch                                 -0.389984  0.08999
-    ## EntryWKTRNITraining                                -0.026677  0.06067
-    ## EntryPUBPRIPrivate                                  0.059996  0.09029
-    ## EntryEMTPTwo-year                                   0.214057  0.23861
-    ## EntryEMTPMed                                       -0.169671  0.09833
-    ## EntryEMTPUni Research Institute                    -0.066439  0.11016
-    ## SDRCARNR2                                          -0.159451  0.09874
-    ## SDRCARNDoctorate                                   -0.114469  0.10154
-    ## SDRCARNOther                                       -0.256709  0.21150
-    ## SDRCARNMedHealth                                   -0.104528  0.13836
-    ## EntryAGE                                            0.005156  0.00528
-    ## GENDERFemale                                        0.034937  0.06110
-    ## MINRTYYes                                          -0.019952  0.07917
-    ## EntryMARINDYes                                      0.100431  0.07207
-    ## EntryCHLVINYes                                      0.016524  0.07298
-    ## EntryCTZUSINCitizen                                 0.065453  0.06982
-    ## EntryPUBPRIPrivate:EntryEMTPTwo-year               -1.349057  0.42357
-    ## EntryPUBPRIPrivate:EntryEMTPMed                    -0.164325  0.13993
-    ## EntryPUBPRIPrivate:EntryEMTPUni Research Institute -0.290719  0.17782
-    ##                                                    (Naive SE)        z
-    ## (Intercept)                                           0.21062  20.4776
-    ## NTT                                                   0.10267  -9.1543
-    ## NTS                                                   0.09300 -11.9422
-    ## DEG2ENTRY                                             0.01656  -0.0318
-    ## EntryWAPRIOther                                       0.10588  -4.4706
-    ## EntryWAPRIResearch                                    0.09184  -4.3334
-    ## EntryWKTRNITraining                                   0.05943  -0.4397
-    ## EntryPUBPRIPrivate                                    0.08730   0.6645
-    ## EntryEMTPTwo-year                                     0.23464   0.8971
-    ## EntryEMTPMed                                          0.09738  -1.7255
-    ## EntryEMTPUni Research Institute                       0.10734  -0.6031
-    ## SDRCARNR2                                             0.09698  -1.6148
-    ## SDRCARNDoctorate                                      0.09840  -1.1274
-    ## SDRCARNOther                                          0.20720  -1.2138
-    ## SDRCARNMedHealth                                      0.14194  -0.7555
-    ## EntryAGE                                              0.00523   0.9761
-    ## GENDERFemale                                          0.05983   0.5718
-    ## MINRTYYes                                             0.07685  -0.2520
-    ## EntryMARINDYes                                        0.07001   1.3936
-    ## EntryCHLVINYes                                        0.07131   0.2264
-    ## EntryCTZUSINCitizen                                   0.06909   0.9374
-    ## EntryPUBPRIPrivate:EntryEMTPTwo-year                  0.47780  -3.1850
-    ## EntryPUBPRIPrivate:EntryEMTPMed                       0.13752  -1.1744
-    ## EntryPUBPRIPrivate:EntryEMTPUni Research Institute    0.17041  -1.6349
-    ##                                                           p
-    ## (Intercept)                                        3.41e-93
-    ## NTT                                                5.47e-20
-    ## NTS                                                7.13e-33
-    ## DEG2ENTRY                                          9.75e-01
-    ## EntryWAPRIOther                                    7.80e-06
-    ## EntryWAPRIResearch                                 1.47e-05
-    ## EntryWKTRNITraining                                6.60e-01
-    ## EntryPUBPRIPrivate                                 5.06e-01
-    ## EntryEMTPTwo-year                                  3.70e-01
-    ## EntryEMTPMed                                       8.44e-02
-    ## EntryEMTPUni Research Institute                    5.46e-01
-    ## SDRCARNR2                                          1.06e-01
-    ## SDRCARNDoctorate                                   2.60e-01
-    ## SDRCARNOther                                       2.25e-01
-    ## SDRCARNMedHealth                                   4.50e-01
-    ## EntryAGE                                           3.29e-01
-    ## GENDERFemale                                       5.67e-01
-    ## MINRTYYes                                          8.01e-01
-    ## EntryMARINDYes                                     1.63e-01
-    ## EntryCHLVINYes                                     8.21e-01
-    ## EntryCTZUSINCitizen                                3.49e-01
-    ## EntryPUBPRIPrivate:EntryEMTPTwo-year               1.45e-03
-    ## EntryPUBPRIPrivate:EntryEMTPMed                    2.40e-01
-    ## EntryPUBPRIPrivate:EntryEMTPUni Research Institute 1.02e-01
-    ## 
-    ## Scale fixed at 1 
-    ## 
-    ## Exponential distribution
-    ## Loglik(model)= -4127.6   Loglik(intercept only)= -4344.7
-    ##  Chisq= 434.2 on 23 degrees of freedom, p= 0 
-    ## (Loglikelihood assumes independent observations)
-    ## Number of Newton-Raphson Iterations: 6 
-    ## n=7905 (670 observations deleted due to missingness)
 
 ### AFT Specification
 
@@ -947,6 +489,7 @@ Comparing the Exponential AFT Model and the Cox Models
 ------------------------------------------------------
 
 ``` r
+space <- c("", "")
 aft_table2 <- rbind(aft_table[1:21, c(1, 5)], space, space, aft_table[22:24, 
     c(1, 5)])
 RC_cox_table2 <- rbind(space, RC_cox_table[, c(2, 6)])
@@ -990,7 +533,59 @@ kable(ctable)
 | Private x Medical            |   1.178| 0.24      | 1.186     | 0.218        | 1.179     | 0.255        |
 | Private x Research Institute |   1.338| 0.102     | 1.346     | 0.08         | 1.323     | 0.12         |
 
+COMPARING RC and IC models. Again, these models differ slightly. The Right censored (RC) model includes the time interaction with tenure status, but it fails to deal with the interval censoring of the data and assume every individual entered his or her job midway through the previous interval. The Interval censored (IC) model effectivey handles the interval censoring, but it does not allow for an interaction between time and tenure status. Nevertheless, the results are comparable.
+
+The fit statistics of these two models is difficult to reconcile. The RC model has an Rsquare of 0.047. The log likelihood is listed as -1.013048210^{4}, -9939.400298. I'm not sure what two numbers mean. Perhaps one is only for the intercept? The IC model reports a log likelihood of -3639.0884452, which is considerably different from the RC model.
+
 The tenure status coefficients associated with the exponential AFT model are a little bit less, but generally the results across these models are comparable.
+
+Final Model
+-----------
+
+``` r
+kable(RC_cox_table)
+```
+
+|                              |    coef|  exp(coef)|  se(coef)|  robust se|       z|  Pr(&gt;|z|)|
+|------------------------------|-------:|----------:|---------:|----------:|-------:|------------:|
+| Non-tenure Track (NTT)       |   1.051|      2.860|     0.142|      0.139|   7.537|        0.000|
+| No Tenure System             |   1.243|      3.466|     0.127|      0.123|  10.075|        0.000|
+| Time between Degree and Job  |  -0.022|      0.979|     0.017|      0.017|  -1.232|        0.218|
+| Admin/Other                  |   0.486|      1.626|     0.106|      0.102|   4.757|        0.000|
+| Researcher                   |   0.437|      1.547|     0.091|      0.087|   5.015|        0.000|
+| Workplace Training           |   0.021|      1.021|     0.059|      0.059|   0.360|        0.719|
+| Private Control              |  -0.060|      0.941|     0.087|      0.088|  -0.689|        0.491|
+| Two-year/Other               |  -0.169|      0.845|     0.234|      0.237|  -0.713|        0.476|
+| Medical                      |   0.127|      1.136|     0.097|      0.097|   1.311|        0.190|
+| Research Institute           |   0.052|      1.053|     0.107|      0.107|   0.485|        0.627|
+| PhD Research II              |   0.138|      1.148|     0.097|      0.097|   1.427|        0.154|
+| PhD Doctorate Institution    |   0.100|      1.105|     0.098|      0.098|   1.021|        0.307|
+| PhD Other                    |   0.230|      1.258|     0.206|      0.208|   1.102|        0.270|
+| PhD Medical/Health           |   0.077|      1.080|     0.141|      0.142|   0.542|        0.588|
+| Age                          |  -0.004|      0.996|     0.005|      0.005|  -0.838|        0.402|
+| Female                       |  -0.078|      0.925|     0.060|      0.059|  -1.319|        0.187|
+| Minority                     |   0.026|      1.027|     0.077|      0.077|   0.344|        0.731|
+| Married                      |  -0.090|      0.914|     0.070|      0.070|  -1.283|        0.200|
+| Children                     |  -0.006|      0.994|     0.071|      0.071|  -0.091|        0.927|
+| Citizen                      |   0.058|      1.060|     0.069|      0.068|   0.852|        0.394|
+| Time x NTT                   |  -0.200|      0.819|     0.117|      0.114|  -1.755|        0.079|
+| Time x No Tenure System      |  -0.345|      0.708|     0.100|      0.098|  -3.508|        0.000|
+| Private x Two-Year           |   1.085|      2.958|     0.476|      0.482|   2.252|        0.024|
+| Private x Medical            |   0.170|      1.186|     0.137|      0.138|   1.233|        0.218|
+| Private x Research Institute |   0.297|      1.346|     0.170|      0.170|   1.752|        0.080|
+
+``` r
+summary(RC_Mod2)$rsq
+```
+
+    ##        rsq     maxrsq 
+    ## 0.04719445 0.92293120
+
+``` r
+write.csv(RC_cox_table, file.path(Graphs, "RC_cox_table.csv"))
+```
+
+R output also reports the concordance, likelihood ratio test, wald test and score (logrank) test.
 
 Conclusions
 -----------
