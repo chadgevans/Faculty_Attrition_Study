@@ -84,6 +84,8 @@ length(unique(data$REFID))  # The number of individuals who participated in the 
 Life Tables
 -----------
 
+First, lets write a function to create our life tables.
+
 ``` r
 intervals <- 2  # number units per intervals for life table
 LifeTableIt <- function(data) {
@@ -99,7 +101,7 @@ LifeTableIt <- function(data) {
 
 ### Life Table of All Faculty, Aggregated
 
-The first Life Table will tabulate the survival probabilities and hazards for all faculty (aggregated).
+This first Life Table will tabulate the survival probabilities and hazards for all faculty (aggregated).
 
 ``` r
 ltab <- LifeTableIt(data)
@@ -203,7 +205,7 @@ The default confidence interval (above) is log, which calculates intervals based
 
 ### Statistical Test for differences
 
-Often it is useful to have a statistical test for whether survival curves of two groups differ. Let's look at the most common test, the log-rank test (a.k.a. the Mantel-Haenszel test).
+Often it is useful to have a statistical test for whether survival curves of two (or more) groups differ. Let's look at the most common test, the log-rank test (a.k.a. the Mantel-Haenszel test).
 
 ``` r
 survdiff(Surv(TIME, Censor) ~ EntryTENSTA, data = data, rho = 0)  # log-rank or Mantel-Haenszel test
@@ -254,7 +256,7 @@ test <- data[-train_ind, ]
 
 First, we fit a simple Cox model predicting attrition from academia from a categorical predictor of tenure status at workforce entry. We employ the efron method of dealing with ties, although other popular methods (e.g., breslow method) are available. The Efron approximation is more accurate when dealing with tied death times, and is as efficient computationally.
 
-The Surv function here frames censoring as follows. It assumes that individuals entered the study halfway through the previous interval. It treats censoring from the "EndDate"--that is, the last year he or she was still employed. Censoring, of course, happens after that point, so an individual who enters in year 0, remains in the study through year 2 in its entirely and subsequently drops out between year 2 and 4 would be coded as "3+." There are two years for the full interval, plus the extra entry year.
+The Surv function here frames censoring as follows. It assumes that individuals entered the study halfway through the previous interval. The extra year assumption was necessary to avoid "spontaneous attrition" that would have removed from the analysis any indiviudal who entered and exited during the same interval. As these early attriters are so very important to this study, we assume they entered halfway into the previous interval. This method treats censoring from the "EndDate"--that is, the last year he or she was still employed. Censoring, of course, happens after that point, so an individual who enters in year 0, remains in the study through year 2 in its entirety and subsequently drops out between year 2 and 4 would be coded as "3+." There are two years for the full interval, plus the extra entry year (assumption).
 
 ``` r
 RC_Mod1 <- coxph(Surv(TIME2, Censor) ~ NTT + NTS, data = test, method = "efron")  # breslow option available
@@ -279,7 +281,7 @@ round(cox.zph$table, 3)
 
 This function tests proportionality by interacting each predictor with log time (km transformation). Rho is the pearson product-moment correlation between the scaled residuals (Schoenfeld) and log(time) for each covariate. The global test jointly tests all of the interactions. Low p-values suggest a violation of the assumption of proportional hazards.
 
-Now let's build a more comprehensive model. Importantly we'll include an interaction between time and our tenure status variables (NTT or NTS dummies) to test the assumption of proportional hazards and also correct for non-proportional hazards. Here we use the TIME2 variable which simply adds an extra year to everyone's event time. We are basically assuming then that their interval began halfway through the previous interval.
+Now let's build a more comprehensive model. Importantly we'll include an interaction between time and our tenure status variables (NTT or NTS dummies) to test the assumption of proportional hazards and also correct for non-proportional hazards. Here we use the TIME2 variable which simply adds an extra year to everyone's event time.
 
 ``` r
 RC_Mod2 <- coxph(Surv(TIME2, Censor) ~ NTT + NTS + DEG2ENTRY + EntryWAPRI + 
@@ -296,11 +298,11 @@ The model reveals other important predcitors, including the subject's main job a
 
 #### Interval Censored Data Model
 
-The data used in this study not only have right censoring, they are interval censored. We know the interval during when an event took place, but we do not know the particular time of the event. Unfortunately, the well-developed and supported function coxph() from the survival package does not handle interval censoring. I searched for a different R package capable of handling interval censoring and found the icenreg package. There is some documentation for this package, however, it is considerably less developed than function in the suvival package.
+The data used in this study not only have right censoring, they are interval censored. We know the interval during when an event took place, but we do not know the particular time of the event. Unfortunately, the well-developed and supported function coxph() from the survival package does not handle interval censoring. I searched for a different R package capable of handling interval censoring and found the icenreg package. There is some documentation for this package, however, it is considerably less developed than functions in the suvival package.
 
 We'll follow the same model development approach as in the last specification. We'll try to develop a complex model using training data and then apply this model to test data.
 
-Using this method does not require the assumption that the subject enters the study midway through the previous wave. It only depends on the interval itself. I suspect this is related to the fact that Cox models do not require the time of occurance, only the order in which events took place.
+Using this method does not require the assumption that the subject enters the study midway through the previous wave. It only depends on the interval itself.
 
 ``` r
 IC_Mod1 <- ic_sp(Surv(lower, upper, type = "interval2") ~ NTT + NTS, model = "ph", 
@@ -449,14 +451,16 @@ kable(ctable)
 
 The results of the AFT model (exponential) look similar to the results from the cox models. This helps to validate the findings.
 
-Comparing the RC and IC models, we see that the models differ slightly. The Right censored (RC) model includes the time interaction with tenure status, but it fails to deal with the interval censoring of the data and assume every individual entered his or her job midway through the previous interval. The Interval censored (IC) model effectivey handles the interval censoring, but it does not allow for an interaction between time and tenure status. Nevertheless, the results are comparable.
+Comparing the RC and IC cox models, we see that the models differ slightly. The Right censored (RC) model includes the time interaction with tenure status, but it fails to deal with the interval censoring of the data and assume every individual entered his or her job midway through the previous interval. The Interval censored (IC) model effectivey handles the interval censoring, but it does not allow for an interaction between time and tenure status. Nevertheless, the results are comparable.
 
-The fit statistics of these two models is difficult to reconcile. The RC model has an Rsquare of 0.047. The log likelihood is listed as -1.013048210^{4}, -9939.400298. I'm not sure what two numbers mean. Perhaps one is only for the intercept? The IC model reports a log likelihood of -3639.0884452, which is considerably different from the RC model.
+The fit statistics of these two models is difficult to reconcile. The RC model has an Rsquare of 0.047. The log likelihood is listed as -1.013048210^{4}, -9939.400298. I'm not sure what these two numbers mean. Perhaps one is only for the intercept? The IC model reports a log likelihood of -3639.0884452, which is considerably different from the RC model.
 
 The tenure status coefficients associated with the exponential AFT model are a little bit less, but generally the results across these models are comparable.
 
 Final Model
 -----------
+
+The final model for this chapter is a right censored Cox proportional hazards model. It is true that the data are also interval censored, however, the intervals are very close to being of equal length. As a result, we can treat this as a discrete time analyisis with right censored data. Importantly, the right censored model allows us to include a timme interaction. This effectively allows us to use the cox proportional hazards model even though the hazards of tenure-track and non-tenure track faculty are not proportional at one or more time points. This is particularly important during the years of tenure review, as the hazard of attrition likely shifts significantly for those faculty on the tenure line.
 
 ``` r
 kable(RC_cox_table)
@@ -491,7 +495,7 @@ kable(RC_cox_table)
 | Private x Research Institute |   0.297|      1.346|     0.170|      0.170|   1.752|        0.080|
 
 ``` r
-summary(RC_Mod2)$rsq
+summary(RC_Mod2)$rsq  # Fit statistic
 ```
 
     ##        rsq     maxrsq 
@@ -509,4 +513,5 @@ Conclusions
 1.  Tenure status at hiring related to attrition
 2.  Attrition more prevalent among NTT and NTS faculty, however, large numbers make a career of it
 3.  Attrition is more of a risk for researchers and administrators, not teachers
-4.  Relationships likely underfit by the model. Acquire more faculty characteristics, particularly time-varying characteristics.
+4.  It might be useful to look into private, two-year institutions
+5.  Relationships likely underfit by the model. Acquire more faculty characteristics, particularly time-varying characteristics.

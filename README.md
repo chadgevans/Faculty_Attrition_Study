@@ -1,4 +1,3 @@
-# Faculty Attrition
-This analysis, a dissertation chapter, examines the attrition of faculty from colleges and universities in the United States.  I utilize data from the Survey of Doctorate Recipients (1993-2013), which includes 10 waves of panel data on Ph.D. recipients from the STEM fields.
+# Faculty Attrition Study
 
-# Faculty_Attrition_Study
+Research suggests that non-tenure track faculty may be attriting from academia at higher rates than tenure-track faculty.  However, estimates are likely biased as models have failed to factor in the right-censoring of data that happens when individuals attrit.  This chapter provides the best estimates to date on the attrition rates of non-tenure track faculty.
