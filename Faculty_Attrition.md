@@ -463,36 +463,37 @@ Final Model
 The final model for this chapter is a right censored Cox proportional hazards model. It is true that the data are also interval censored, however, the intervals are very close to being of equal length. As a result, we can treat this as a discrete time analyisis with right censored data. Importantly, the right censored model allows us to include a timme interaction. This effectively allows us to use the cox proportional hazards model even though the hazards of tenure-track and non-tenure track faculty are not proportional at one or more time points. This is particularly important during the years of tenure review, as the hazard of attrition likely shifts significantly for those faculty on the tenure line.
 
 ``` r
+names(RC_cox_table) <- c("coef", "exp(coef)", "SE", "Robust SE", "z stat", "p value")
 kable(RC_cox_table)
 ```
 
-|                              |    coef|  exp(coef)|  se(coef)|  robust se|       z|  Pr(&gt;|z|)|
-|------------------------------|-------:|----------:|---------:|----------:|-------:|------------:|
-| Non-tenure Track (NTT)       |   1.051|      2.860|     0.142|      0.139|   7.537|        0.000|
-| No Tenure System             |   1.243|      3.466|     0.127|      0.123|  10.075|        0.000|
-| Time between Degree and Job  |  -0.022|      0.979|     0.017|      0.017|  -1.232|        0.218|
-| Admin/Other                  |   0.486|      1.626|     0.106|      0.102|   4.757|        0.000|
-| Researcher                   |   0.437|      1.547|     0.091|      0.087|   5.015|        0.000|
-| Workplace Training           |   0.021|      1.021|     0.059|      0.059|   0.360|        0.719|
-| Private Control              |  -0.060|      0.941|     0.087|      0.088|  -0.689|        0.491|
-| Two-year/Other               |  -0.169|      0.845|     0.234|      0.237|  -0.713|        0.476|
-| Medical                      |   0.127|      1.136|     0.097|      0.097|   1.311|        0.190|
-| Research Institute           |   0.052|      1.053|     0.107|      0.107|   0.485|        0.627|
-| PhD Research II              |   0.138|      1.148|     0.097|      0.097|   1.427|        0.154|
-| PhD Doctorate Institution    |   0.100|      1.105|     0.098|      0.098|   1.021|        0.307|
-| PhD Other                    |   0.230|      1.258|     0.206|      0.208|   1.102|        0.270|
-| PhD Medical/Health           |   0.077|      1.080|     0.141|      0.142|   0.542|        0.588|
-| Age                          |  -0.004|      0.996|     0.005|      0.005|  -0.838|        0.402|
-| Female                       |  -0.078|      0.925|     0.060|      0.059|  -1.319|        0.187|
-| Minority                     |   0.026|      1.027|     0.077|      0.077|   0.344|        0.731|
-| Married                      |  -0.090|      0.914|     0.070|      0.070|  -1.283|        0.200|
-| Children                     |  -0.006|      0.994|     0.071|      0.071|  -0.091|        0.927|
-| Citizen                      |   0.058|      1.060|     0.069|      0.068|   0.852|        0.394|
-| Time x NTT                   |  -0.200|      0.819|     0.117|      0.114|  -1.755|        0.079|
-| Time x No Tenure System      |  -0.345|      0.708|     0.100|      0.098|  -3.508|        0.000|
-| Private x Two-Year           |   1.085|      2.958|     0.476|      0.482|   2.252|        0.024|
-| Private x Medical            |   0.170|      1.186|     0.137|      0.138|   1.233|        0.218|
-| Private x Research Institute |   0.297|      1.346|     0.170|      0.170|   1.752|        0.080|
+|                              |    coef|  exp(coef)|     SE|  Robust SE|  z stat|  p value|
+|------------------------------|-------:|----------:|------:|----------:|-------:|--------:|
+| Non-tenure Track (NTT)       |   1.051|      2.860|  0.142|      0.139|   7.537|    0.000|
+| No Tenure System             |   1.243|      3.466|  0.127|      0.123|  10.075|    0.000|
+| Time between Degree and Job  |  -0.022|      0.979|  0.017|      0.017|  -1.232|    0.218|
+| Admin/Other                  |   0.486|      1.626|  0.106|      0.102|   4.757|    0.000|
+| Researcher                   |   0.437|      1.547|  0.091|      0.087|   5.015|    0.000|
+| Workplace Training           |   0.021|      1.021|  0.059|      0.059|   0.360|    0.719|
+| Private Control              |  -0.060|      0.941|  0.087|      0.088|  -0.689|    0.491|
+| Two-year/Other               |  -0.169|      0.845|  0.234|      0.237|  -0.713|    0.476|
+| Medical                      |   0.127|      1.136|  0.097|      0.097|   1.311|    0.190|
+| Research Institute           |   0.052|      1.053|  0.107|      0.107|   0.485|    0.627|
+| PhD Research II              |   0.138|      1.148|  0.097|      0.097|   1.427|    0.154|
+| PhD Doctorate Institution    |   0.100|      1.105|  0.098|      0.098|   1.021|    0.307|
+| PhD Other                    |   0.230|      1.258|  0.206|      0.208|   1.102|    0.270|
+| PhD Medical/Health           |   0.077|      1.080|  0.141|      0.142|   0.542|    0.588|
+| Age                          |  -0.004|      0.996|  0.005|      0.005|  -0.838|    0.402|
+| Female                       |  -0.078|      0.925|  0.060|      0.059|  -1.319|    0.187|
+| Minority                     |   0.026|      1.027|  0.077|      0.077|   0.344|    0.731|
+| Married                      |  -0.090|      0.914|  0.070|      0.070|  -1.283|    0.200|
+| Children                     |  -0.006|      0.994|  0.071|      0.071|  -0.091|    0.927|
+| Citizen                      |   0.058|      1.060|  0.069|      0.068|   0.852|    0.394|
+| Time x NTT                   |  -0.200|      0.819|  0.117|      0.114|  -1.755|    0.079|
+| Time x No Tenure System      |  -0.345|      0.708|  0.100|      0.098|  -3.508|    0.000|
+| Private x Two-Year           |   1.085|      2.958|  0.476|      0.482|   2.252|    0.024|
+| Private x Medical            |   0.170|      1.186|  0.137|      0.138|   1.233|    0.218|
+| Private x Research Institute |   0.297|      1.346|  0.170|      0.170|   1.752|    0.080|
 
 ``` r
 summary(RC_Mod2)$rsq  # Fit statistic
