@@ -154,6 +154,15 @@ LTs
     ## 10-11   0.857 0.008    0.660  0.015    0.574  0.010
     ## 11-NA   0.857 0.008    0.650  0.017    0.565  0.012
 
+``` r
+# names(LTs)<-c('Tenure/Track','TT SE','Non_Tenure/Track','NTT SE','No
+# Tenure System','NTS SE')
+```
+
+``` r
+write.csv(LTs, file.path(Graphs, "Life_table.csv"))
+```
+
 Clearly, the survival probabilities cascade much more rapidly for NTT and NTS faculty.
 
 ### Graphing Survival Curves of Faculty
@@ -285,14 +294,14 @@ Now let's build a more comprehensive model. Importantly we'll include an interac
 
 ``` r
 RC_Mod2 <- coxph(Surv(TIME2, Censor) ~ NTT + NTS + DEG2ENTRY + EntryWAPRI + 
-    EntryWKTRNI + EntryPUBPRI + EntryEMTP + EntryPUBPRI * EntryEMTP + SDRCARN + 
-    EntryAGE + GENDER + MINRTY + EntryMARIND + EntryCHLVIN + EntryCTZUSIN + 
+    EntryWKTRNI + LogSalary + EntryPUBPRI + EntryEMTP + EntryPUBPRI * EntryEMTP + 
+    SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + EntryCHLVIN + EntryCTZUSIN + 
     tt(NTT) + tt(NTS), data = test, method = "efron", robust = TRUE, tt = function(x, 
     t, ...) x * log(t))
 summary(RC_Mod2)
 ```
 
-Even after controlling for background characteristics, there are significant differences. Here, NTT status or working at a college or university without a tenure system impacts the hazard, multiplying the baseline by a factor of 2.8598117 and 3.4658201. This is equivalent to saying that each tenure status increases the hazard of attrition by 185.9811676 and 246.5820096 percent, controlling for background characteristics. R output also provides the exponentiated negative coefficient. To my understanding, that just allows you to compare the groups relative to the baseline hazard of the tenure-track group. Robust standard errors were used in this model.
+Even after controlling for background characteristics, there are significant differences. Here, NTT status or working at a college or university without a tenure system impacts the hazard, multiplying the baseline by a factor of 2.7741545 and 3.352443. This is equivalent to saying that each tenure status increases the hazard of attrition by 177.4154456 and 235.2443049 percent, controlling for background characteristics. R output also provides the exponentiated negative coefficient. To my understanding, that just allows you to compare the groups relative to the baseline hazard of the tenure-track group. Robust standard errors were used in this model.
 
 The model reveals other important predcitors, including the subject's main job and possible interactions between institution type and public/private status.
 
@@ -306,25 +315,25 @@ Using this method does not require the assumption that the subject enters the st
 
 ``` r
 IC_Mod1 <- ic_sp(Surv(lower, upper, type = "interval2") ~ NTT + NTS, model = "ph", 
-    bs_samples = 100, data = data)
+    bs_samples = 100, data = test)
 summary(IC_Mod1)
 ```
 
 ``` r
 IC_Mod1 <- ic_sp(Surv(lower, upper, type = "interval2") ~ NTT + NTS + DEG2ENTRY + 
-    EntryWAPRI + EntryWKTRNI + EntryPUBPRI + EntryEMTP + EntryPUBPRI * EntryEMTP + 
-    SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + EntryCHLVIN + EntryCTZUSIN, 
-    model = "ph", bs_samples = 100, data = test)
+    EntryWAPRI + EntryWKTRNI + LogSalary + EntryPUBPRI + EntryEMTP + EntryPUBPRI * 
+    EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + EntryCHLVIN + 
+    EntryCTZUSIN, model = "ph", bs_samples = 100, data = test)
 summary(IC_Mod1)
 ```
 
 ``` r
 # This is time-intensive at bs_samples=10, maybe a minute per sample.
 IC_Mod2 <- ic_sp(Surv(lower, upper, type = "interval2") ~ NTT + NTS + DEG2ENTRY + 
-    EntryWAPRI + EntryWKTRNI + EntryPUBPRI + EntryEMTP + EntryPUBPRI * EntryEMTP + 
-    EntryPUBPRI * EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + 
-    EntryCHLVIN + EntryCTZUSIN + TIME * NTT + TIME * NTS, model = "ph", bs_samples = 10, 
-    data = data)
+    EntryWAPRI + EntryWKTRNI + LogSalary + EntryPUBPRI + EntryEMTP + EntryPUBPRI * 
+    EntryEMTP + EntryPUBPRI * EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + 
+    EntryMARIND + EntryCHLVIN + EntryCTZUSIN + TIME * NTT + TIME * NTS, model = "ph", 
+    bs_samples = 10, data = test)
 summary(IC_Mod2)
 # Also, this model is wrong because there should not be a coefficient
 # produced for time.  Furthermore, that coefficient sops up all the
@@ -354,29 +363,29 @@ For fully parameterized models, the timing of an event matters (unlike the cox m
 
 ``` r
 Exp_mod <- survreg(Surv(lower + 1, upper + 1, type = "interval2") ~ NTT + NTS + 
-    DEG2ENTRY + EntryWAPRI + EntryWKTRNI + EntryPUBPRI + EntryEMTP + EntryPUBPRI * 
-    EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + EntryCHLVIN + 
-    EntryCTZUSIN, data = test, dist = "exponential", robust = TRUE)
+    DEG2ENTRY + EntryWAPRI + EntryWKTRNI + LogSalary + EntryPUBPRI + EntryEMTP + 
+    EntryPUBPRI * EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + 
+    EntryCHLVIN + EntryCTZUSIN, data = test, dist = "exponential", robust = TRUE)
 ```
 
 ``` r
 loglog_mod <- survreg(Surv(lower + 1, upper + 1, type = "interval2") ~ NTT + 
-    NTS + DEG2ENTRY + EntryWAPRI + EntryWKTRNI + EntryPUBPRI + EntryEMTP + EntryPUBPRI * 
-    EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + EntryCHLVIN + 
-    EntryCTZUSIN, data = test, dist = "loglogistic", robust = TRUE)
+    NTS + DEG2ENTRY + EntryWAPRI + EntryWKTRNI + LogSalary + EntryPUBPRI + EntryEMTP + 
+    EntryPUBPRI * EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + 
+    EntryCHLVIN + EntryCTZUSIN, data = test, dist = "loglogistic", robust = TRUE)
 ```
 
 ``` r
 summary(Exp_mod)$loglik[2]
 ```
 
-    ## [1] -4127.559
+    ## [1] -4126.629
 
 ``` r
 summary(loglog_mod)$loglik[2]
 ```
 
-    ## [1] -4039.913
+    ## [1] -4039.262
 
 Because the log-likelihood is higher (less negative), the log logistic model actually fits the data better. The higher logliklihood simply means that that the probability of the data is marginally closer to 1 (certitude). However, the exponential distribution fits the data similarly. In addition, parameterizing log(time) as an exponential function allows me to convert coefficients to hazards ratios. I can therefore compare the results to the findings of the cox models. As the final analysis will be a cox model, I use the exponential AFT for validation purposes.
 
@@ -385,31 +394,32 @@ Because the log-likelihood is higher (less negative), the log logistic model act
 ``` r
 table <- as.data.frame(summary(Exp_mod)$table)
 rownames(table) <- c("Intercept", "Non-tenure Track", "No Tenure System", "Time between Degree and Job", 
-    "Administration/Other", "Research", "Workplace Training", "Private Control", 
-    "Two-year", "Medical", "Research Institute", "PhD Research II", "PhD Doctorate Institution", 
-    "PhD Other", "PhD Medical/Health", "Age", "Female", "Minority", "Married", 
-    "Parent", "Citizen", "Private x Two-Year", "Private x Medical", "Private x Research Institute")
+    "Administration/Other", "Research", "Workplace Training", "Log Salary", 
+    "Private Control", "Two-year", "Medical", "Research Institute", "PhD Research II", 
+    "PhD Doctorate Institution", "PhD Other", "PhD Medical/Health", "Age", "Female", 
+    "Minority", "Married", "Parent", "Citizen", "Private x Two-Year", "Private x Medical", 
+    "Private x Research Institute")
 table$expCoef <- exp(table$Value)
 names(table)[names(table) == "Std. Err"] <- "Robust SE"
 aft_table <- round(table[, c("Value", "expCoef", "Robust SE", "z", "p")], 3)
 kable(aft_table)
 ```
 
-The exponential distribution has a constant hazard *λ*(*t*)=*λ* and thus a survival function of *S*(*t*)=*e*<sup>−*λ*(*t*)</sup> and density of *f*(*t*)=*λ* × *e*<sup>−*λ*(*t*)</sup>. An interesting occurance is that the expected survival time for this distribution is *E*(*t*)=1/*λ* and its variance is *E*(*t*)=1/*λ*<sup>2</sup>. This makes the mean survival time equal to e^intercept (75.1287755). It's inverse (0.0133105) is the MLE of the (constant) hazard rate. Of course, the model performs poorly extrapolating to such an extreme timepoint.
+The exponential distribution has a constant hazard *λ*(*t*)=*λ* and thus a survival function of *S*(*t*)=*e*<sup>−*λ*(*t*)</sup> and density of *f*(*t*)=*λ* × *e*<sup>−*λ*(*t*)</sup>. An interesting occurance is that the expected survival time for this distribution is *E*(*t*)=1/*λ* and its variance is *E*(*t*)=1/*λ*<sup>2</sup>. This makes the mean survival time equal to e^intercept (42.7369411). It's inverse (0.023399) is the MLE of the (constant) hazard rate. Of course, the model performs poorly extrapolating to such an extreme timepoint.
 
-AFT models are typcally interpreted in a way that covariates have a multiplicative effect on the expected survival time. So, with regard to tenure status, taking your first job as NTT accelerates the time to attrition by a factor of 0.3919478 (0.3919478 times shorter survival time compared to the baseline survival). Beginning an academic career in a non-tenure system accelerates the time to attrition by a factor of 0.3377075. The life course for these states is -60.8052173 and -66.229245 percent shorter, respectively.
+AFT models are typcally interpreted in a way that covariates have a multiplicative effect on the expected survival time. So, with regard to tenure status, taking your first job as NTT accelerates the time to attrition by a factor of 0.3984863 (0.3984863 times shorter survival time compared to the baseline survival). Beginning an academic career in a non-tenure system accelerates the time to attrition by a factor of 0.3455454. The life course for these states is -60.1513682 and -65.4454634 percent shorter, respectively.
 
-The Weibull family of distributions (of which the exponential is a sub-class) has the advantage that covariates can also be interpreted as an impact on the hazard ratios. For this famiily of distributions, the coefficient is multiplied by -1 and then multiplied by a shape parameter (1/scale parameter). In the case of the exponential distributuion, the shape parameter is simply 1/1. So in our case, the hazard ratio comparing NTT to tenure-track positions is 2.55136. The risk of attrition increases by a factor of 2.55136 when one begins an academic career in a NTT position. Faculty with a first job at a non-teure system institution increases their risk by a factor of 2.961142.
+The Weibull family of distributions (of which the exponential is a sub-class) has the advantage that covariates can also be interpreted as an impact on the hazard ratios. For this famiily of distributions, the coefficient is multiplied by -1 and then multiplied by a shape parameter (1/scale parameter). In the case of the exponential distributuion, the shape parameter is simply 1/1. So in our case, the hazard ratio comparing NTT to tenure-track positions is 2.5094964. The risk of attrition increases by a factor of 2.5094964 when one begins an academic career in a NTT position. Faculty with a first job at a non-teure system institution increases their risk by a factor of 2.893976.
 
 Comparing the Exponential AFT Model and the Cox Models
 ------------------------------------------------------
 
 ``` r
 space <- c("", "")
-aft_table2 <- rbind(aft_table[1:21, c(1, 5)], space, space, aft_table[22:24, 
+aft_table2 <- rbind(aft_table[1:22, c(1, 5)], space, space, aft_table[23:25, 
     c(1, 5)])
 RC_cox_table2 <- rbind(space, RC_cox_table[, c(2, 6)])
-IC_cox_table2 <- rbind(space, IC_cox_table[1:20, c(2, 5)], space, space, IC_cox_table[21:23, 
+IC_cox_table2 <- rbind(space, IC_cox_table[1:21, c(2, 5)], space, space, IC_cox_table[22:24, 
     c(2, 5)])
 ctable <- cbind(aft_table2, RC_cox_table2, IC_cox_table2)
 rownames(ctable) <- rownames(RC_cox_table2)
@@ -422,38 +432,39 @@ kable(ctable)
 
 |                              |  AFT:HR| AFT p-val | RC Cox:HR | RC Cox p-val | IC Cox:HR | IC Cox p-val |
 |------------------------------|-------:|:----------|:----------|:-------------|:----------|:-------------|
-| Intercept                    |   0.013| 0         |           |              |           |              |
-| Non-tenure Track (NTT)       |   2.552| 0         | 2.86      | 0            | 2.617     | 0            |
-| No Tenure System             |   2.962| 0         | 3.466     | 0            | 3.025     | 0            |
-| Time between Degree and Job  |   1.001| 0.975     | 0.979     | 0.218        | 0.999     | 0.963        |
-| Admin/Other                  |   1.602| 0         | 1.626     | 0            | 1.582     | 0            |
-| Researcher                   |   1.477| 0         | 1.547     | 0            | 1.466     | 0            |
-| Workplace Training           |   1.027| 0.66      | 1.021     | 0.719        | 1.009     | 0.876        |
-| Private Control              |   0.942| 0.506     | 0.941     | 0.491        | 0.934     | 0.48         |
-| Two-year/Other               |   0.807| 0.37      | 0.845     | 0.476        | 0.805     | 0.346        |
-| Medical                      |   1.185| 0.084     | 1.136     | 0.19         | 1.147     | 0.175        |
-| Research Institute           |   1.068| 0.546     | 1.053     | 0.627        | 1.047     | 0.682        |
-| PhD Research II              |   1.172| 0.106     | 1.148     | 0.154        | 1.174     | 0.12         |
-| PhD Doctorate Institution    |   1.121| 0.26      | 1.105     | 0.307        | 1.108     | 0.336        |
-| PhD Other                    |   1.293| 0.225     | 1.258     | 0.27         | 1.324     | 0.22         |
-| PhD Medical/Health           |   1.111| 0.45      | 1.08      | 0.588        | 1.093     | 0.492        |
-| Age                          |   0.995| 0.329     | 0.996     | 0.402        | 0.993     | 0.177        |
-| Female                       |   0.966| 0.567     | 0.925     | 0.187        | 0.966     | 0.571        |
-| Minority                     |   1.020| 0.801     | 1.027     | 0.731        | 1.007     | 0.926        |
-| Married                      |   0.905| 0.163     | 0.914     | 0.2          | 0.91      | 0.248        |
-| Children                     |   0.983| 0.821     | 0.994     | 0.927        | 0.975     | 0.704        |
-| Citizen                      |   0.937| 0.349     | 1.06      | 0.394        | 0.925     | 0.313        |
-| Time x NTT                   |      NA|           | 0.819     | 0.079        |           |              |
+| Intercept                    |   0.023| 0         |           |              |           |              |
+| Non-tenure Track (NTT)       |   2.509| 0         | 2.774     | 0            | 1.037     | 0            |
+| No Tenure System             |   2.895| 0         | 3.352     | 0            | 0.999     | 0.963        |
+| Time between Degree and Job  |   1.003| 0.867     | 0.982     | 0.303        | 1         | 0.948        |
+| Admin/Other                  |   1.621| 0         | 1.651     | 0            | 1.011     | 0.613        |
+| Researcher                   |   1.486| 0         | 1.559     | 0            | 1.01      | 0.681        |
+| Workplace Training           |   1.030| 0.623     | 1.027     | 0.649        | 0.986     | 0            |
+| Log Salary                   |   0.947| 0.119     | 0.928     | 0.033        | 0.989     | 0.295        |
+| Private Control              |   0.946| 0.545     | 0.948     | 0.541        | 0.988     | 0            |
+| Two-year/Other               |   0.799| 0.35      | 0.832     | 0.439        | 1.008     | 0.75         |
+| Medical                      |   1.185| 0.083     | 1.14      | 0.179        | 1.026     | 0.182        |
+| Research Institute           |   1.074| 0.522     | 1.059     | 0.591        | 1.022     | 0.033        |
+| PhD Research II              |   1.175| 0.102     | 1.15      | 0.149        | 1.011     | 0.759        |
+| PhD Doctorate Institution    |   1.122| 0.259     | 1.105     | 0.308        | 0.994     | 0.009        |
+| PhD Other                    |   1.274| 0.257     | 1.237     | 0.31         | 1.019     | 0.392        |
+| PhD Medical/Health           |   1.107| 0.463     | 1.073     | 0.62         | 1.013     | 0.372        |
+| Age                          |   0.995| 0.347     | 0.996     | 0.416        | 1         | 0.517        |
+| Female                       |   0.961| 0.512     | 0.918     | 0.152        | 1.012     | 0.039        |
+| Minority                     |   1.022| 0.778     | 1.03      | 0.703        | 1.01      | 0.18         |
+| Married                      |   0.903| 0.155     | 0.912     | 0.191        | 1.006     | 0.001        |
+| Children                     |   0.982| 0.807     | 0.992     | 0.909        | 0.986     | 0            |
+| Citizen                      |   0.936| 0.347     | 1.059     | 0.405        | 0.995     | 0.201        |
+| Time x NTT                   |      NA|           | 0.823     | 0.087        |           |              |
 | Time x No Tenure System      |      NA|           | 0.708     | 0            |           |              |
-| Private x Two-Year           |   3.854| 0.001     | 2.958     | 0.024        | 3.292     | 0.007        |
-| Private x Medical            |   1.178| 0.24      | 1.186     | 0.218        | 1.179     | 0.255        |
-| Private x Research Institute |   1.338| 0.102     | 1.346     | 0.08         | 1.323     | 0.12         |
+| Private x Two-Year           |   3.885| 0.001     | 2.972     | 0.024        | 0         | 0            |
+| Private x Medical            |   1.175| 0.249     | 1.179     | 0.233        | 0.997     | 0.94         |
+| Private x Research Institute |   1.339| 0.101     | 1.351     | 0.077        | 1.006     | 0.762        |
 
 The results of the AFT model (exponential) look similar to the results from the cox models. This helps to validate the findings.
 
 Comparing the RC and IC cox models, we see that the models differ slightly. The Right censored (RC) model includes the time interaction with tenure status, but it fails to deal with the interval censoring of the data and assume every individual entered his or her job midway through the previous interval. The Interval censored (IC) model effectivey handles the interval censoring, but it does not allow for an interaction between time and tenure status. Nevertheless, the results are comparable.
 
-The fit statistics of these two models is difficult to reconcile. The RC model has an Rsquare of 0.047. The log likelihood is listed as -1.013048210^{4}, -9939.400298. I'm not sure what these two numbers mean. Perhaps one is only for the intercept? The IC model reports a log likelihood of -3639.0884452, which is considerably different from the RC model.
+The fit statistics of these two models is difficult to reconcile. The RC model has an Rsquare of 0.047. The log likelihood is listed as -1.013048210^{4}, -9937.5887645. I'm not sure what these two numbers mean. Perhaps one is only for the intercept? The IC model reports a log likelihood of -3637.8432675, which is considerably different from the RC model.
 
 The tenure status coefficients associated with the exponential AFT model are a little bit less, but generally the results across these models are comparable.
 
@@ -469,38 +480,39 @@ kable(RC_cox_table)
 
 |                              |    coef|  exp(coef)|     SE|  Robust SE|  z stat|  p value|
 |------------------------------|-------:|----------:|------:|----------:|-------:|--------:|
-| Non-tenure Track (NTT)       |   1.051|      2.860|  0.142|      0.139|   7.537|    0.000|
-| No Tenure System             |   1.243|      3.466|  0.127|      0.123|  10.075|    0.000|
-| Time between Degree and Job  |  -0.022|      0.979|  0.017|      0.017|  -1.232|    0.218|
-| Admin/Other                  |   0.486|      1.626|  0.106|      0.102|   4.757|    0.000|
-| Researcher                   |   0.437|      1.547|  0.091|      0.087|   5.015|    0.000|
-| Workplace Training           |   0.021|      1.021|  0.059|      0.059|   0.360|    0.719|
-| Private Control              |  -0.060|      0.941|  0.087|      0.088|  -0.689|    0.491|
-| Two-year/Other               |  -0.169|      0.845|  0.234|      0.237|  -0.713|    0.476|
-| Medical                      |   0.127|      1.136|  0.097|      0.097|   1.311|    0.190|
-| Research Institute           |   0.052|      1.053|  0.107|      0.107|   0.485|    0.627|
-| PhD Research II              |   0.138|      1.148|  0.097|      0.097|   1.427|    0.154|
-| PhD Doctorate Institution    |   0.100|      1.105|  0.098|      0.098|   1.021|    0.307|
-| PhD Other                    |   0.230|      1.258|  0.206|      0.208|   1.102|    0.270|
-| PhD Medical/Health           |   0.077|      1.080|  0.141|      0.142|   0.542|    0.588|
-| Age                          |  -0.004|      0.996|  0.005|      0.005|  -0.838|    0.402|
-| Female                       |  -0.078|      0.925|  0.060|      0.059|  -1.319|    0.187|
-| Minority                     |   0.026|      1.027|  0.077|      0.077|   0.344|    0.731|
-| Married                      |  -0.090|      0.914|  0.070|      0.070|  -1.283|    0.200|
-| Children                     |  -0.006|      0.994|  0.071|      0.071|  -0.091|    0.927|
-| Citizen                      |   0.058|      1.060|  0.069|      0.068|   0.852|    0.394|
-| Time x NTT                   |  -0.200|      0.819|  0.117|      0.114|  -1.755|    0.079|
-| Time x No Tenure System      |  -0.345|      0.708|  0.100|      0.098|  -3.508|    0.000|
-| Private x Two-Year           |   1.085|      2.958|  0.476|      0.482|   2.252|    0.024|
-| Private x Medical            |   0.170|      1.186|  0.137|      0.138|   1.233|    0.218|
-| Private x Research Institute |   0.297|      1.346|  0.170|      0.170|   1.752|    0.080|
+| Non-tenure Track (NTT)       |   1.020|      2.774|  0.143|      0.140|   7.289|    0.000|
+| No Tenure System             |   1.210|      3.352|  0.128|      0.125|   9.715|    0.000|
+| Time between Degree and Job  |  -0.018|      0.982|  0.017|      0.018|  -1.030|    0.303|
+| Admin/Other                  |   0.501|      1.651|  0.106|      0.102|   4.898|    0.000|
+| Researcher                   |   0.444|      1.559|  0.091|      0.087|   5.087|    0.000|
+| Workplace Training           |   0.027|      1.027|  0.059|      0.059|   0.455|    0.649|
+| Log Salary                   |  -0.074|      0.928|  0.037|      0.035|  -2.134|    0.033|
+| Private Control              |  -0.054|      0.948|  0.087|      0.088|  -0.612|    0.541|
+| Two-year/Other               |  -0.184|      0.832|  0.234|      0.238|  -0.773|    0.439|
+| Medical                      |   0.131|      1.140|  0.097|      0.097|   1.344|    0.179|
+| Research Institute           |   0.057|      1.059|  0.107|      0.107|   0.537|    0.591|
+| PhD Research II              |   0.140|      1.150|  0.097|      0.097|   1.442|    0.149|
+| PhD Doctorate Institution    |   0.100|      1.105|  0.098|      0.098|   1.019|    0.308|
+| PhD Other                    |   0.213|      1.237|  0.207|      0.209|   1.016|    0.310|
+| PhD Medical/Health           |   0.070|      1.073|  0.141|      0.142|   0.495|    0.620|
+| Age                          |  -0.004|      0.996|  0.005|      0.005|  -0.813|    0.416|
+| Female                       |  -0.085|      0.918|  0.060|      0.060|  -1.434|    0.152|
+| Minority                     |   0.029|      1.030|  0.077|      0.077|   0.381|    0.703|
+| Married                      |  -0.092|      0.912|  0.070|      0.070|  -1.308|    0.191|
+| Children                     |  -0.008|      0.992|  0.071|      0.071|  -0.114|    0.909|
+| Citizen                      |   0.057|      1.059|  0.069|      0.069|   0.833|    0.405|
+| Time x NTT                   |  -0.195|      0.823|  0.117|      0.114|  -1.712|    0.087|
+| Time x No Tenure System      |  -0.345|      0.708|  0.100|      0.098|  -3.504|    0.000|
+| Private x Two-Year           |   1.089|      2.972|  0.476|      0.482|   2.260|    0.024|
+| Private x Medical            |   0.165|      1.179|  0.137|      0.138|   1.193|    0.233|
+| Private x Research Institute |   0.301|      1.351|  0.170|      0.170|   1.771|    0.077|
 
 ``` r
 summary(RC_Mod2)$rsq  # Fit statistic
 ```
 
     ##        rsq     maxrsq 
-    ## 0.04719445 0.92293120
+    ## 0.04763105 0.92293120
 
 ``` r
 write.csv(RC_cox_table, file.path(Graphs, "RC_cox_table.csv"))
