@@ -2,7 +2,7 @@ Faculty Attrition
 ================
 Chad Evans
 
-Built with R version 3.3.2.
+Built with R version 3.4.4.
 
 Contents
 --------
@@ -19,15 +19,12 @@ Contents
 -   [Graphing Survival Curves of Faculty](#graphing-survival-curves-of-faculty)
     -   Life Table Estimator
     -   Kaplan-Meier Estimator
--   [Cox Proportional Hazards Model](#cox-proportional-hazards-model)
-    -   [Right Censored Data Model](#right-censored-data-model)
-    -   [Interval Censored Data Model](#interval-censored-data-model)
--   [Accelerated Failure Time Models](#accelerated-failure-time-models)
-    -   Exponential
-    -   Lognormal
-    -   [AFT Specification](#aft-specification)
--   [Comparing the Exponential AFT Model and the Cox Models](#comparing-the-exponential-aft-model-and-the-cox-models)
--   [Final Model](#final-model)
+-   [Cox Proportional Hazards Models](#cox-proportional-hazards-models)
+    -   [Naive Model](#naive-model)
+    -   [Controls Model](#controls-model)
+    -   [Mediators Model](#mediators-model)
+    -   [Full Model](#full-model)
+-   [Tabulation of All Models](#tabulation-of-all-models)
 -   [Conclusions](#conclusions)
 
 Configure
@@ -78,7 +75,7 @@ data$NTS<-vars$EntryTENSTANon.tenure.System.Position
 ```
 
 ``` r
-length(unique(data$REFID))  # The number of individuals who participated in the study
+length(unique(data$REFID)) # The number of individuals who participated in the study
 ```
 
 Life Tables
@@ -87,15 +84,17 @@ Life Tables
 First, lets write a function to create our life tables.
 
 ``` r
-intervals <- 2  # number units per intervals for life table
-LifeTableIt <- function(data) {
-    ltab.data <- data %>% mutate(interval = floor(TIME/intervals)) %>% select(interval, 
-        Censor) %>% group_by(interval) %>% dplyr::summarise(attrit = sum(Censor), 
-        count = n()) %>% mutate(nlost = count - attrit)
-    int <- c(ltab.data$interval, NA)  #length is 1 + nlost and nevent 
-    lifetable <- round(with(ltab.data, lifetab(tis = int, ninit = nrow(data), 
-        nlost = nlost, nevent = attrit)), 3)
-    return(lifetable)
+intervals<-2 # number units per intervals for life table
+LifeTableIt <- function(data){
+  ltab.data<-data %>% 
+  mutate(interval = floor(TIME/intervals)) %>%
+  select(interval,Censor) %>%
+  group_by(interval) %>%
+  dplyr::summarise(attrit=sum(Censor), count=n()) %>%
+  mutate(nlost=count-attrit)
+  int<-c(ltab.data$interval,NA) #length is 1 + nlost and nevent 
+  lifetable<-round(with(ltab.data, lifetab(tis=int, ninit=nrow(data), nlost=nlost, nevent=attrit)),3)
+return(lifetable)
 }
 ```
 
@@ -104,7 +103,7 @@ LifeTableIt <- function(data) {
 This first Life Table will tabulate the survival probabilities and hazards for all faculty (aggregated).
 
 ``` r
-ltab <- LifeTableIt(data)
+ltab<-LifeTableIt(data)
 kable(ltab)
 ```
 
@@ -129,15 +128,20 @@ By the last interval, over 30 percent of faculty have attrited from their career
 Now, let's tabulate lifetables for each of the tenure status groups and extract survival probabilities.
 
 ``` r
-LT_TT <- data %>% filter(EntryTENSTA == "Tenure-Track") %>% LifeTableIt()
+LT_TT<-data %>% 
+  filter(EntryTENSTA=="Tenure-Track") %>%
+  LifeTableIt()
 
-LT_NTT <- data %>% filter(EntryTENSTA == "NTT") %>% LifeTableIt()
+LT_NTT<-data %>% 
+  filter(EntryTENSTA=="NTT") %>%
+  LifeTableIt()
 
-LT_NTS <- data %>% filter(EntryTENSTA == "Non-tenure System/Position") %>% LifeTableIt()
+LT_NTS<-data %>% 
+  filter(EntryTENSTA=="Non-tenure System/Position") %>%
+  LifeTableIt()
 
-LTs <- data.frame(LT_TT[, c("surv", "se.surv")], LT_NTT[, c("surv", "se.surv")], 
-    LT_NTS[, c("surv", "se.surv")])
-names(LTs) <- c("TT Surv", "TT SE", "NTT Surv", "NTT SE", "NTS Surv", "NTS SE")
+LTs<-data.frame(LT_TT[,c("surv","se.surv")], LT_NTT[,c("surv","se.surv")], LT_NTS[,c("surv","se.surv")])
+names(LTs)<-c("TT Surv","TT SE","NTT Surv","NTT SE","NTS Surv","NTS SE")
 LTs
 ```
 
@@ -155,12 +159,11 @@ LTs
     ## 11-NA   0.857 0.008    0.650  0.017    0.565  0.012
 
 ``` r
-# names(LTs)<-c('Tenure/Track','TT SE','Non_Tenure/Track','NTT SE','No
-# Tenure System','NTS SE')
+#names(LTs)<-c("Tenure/Track","TT SE","Non_Tenure/Track","NTT SE","No Tenure System","NTS SE")
 ```
 
 ``` r
-write.csv(LTs, file.path(Graphs, "Life_table.csv"))
+write.csv(LTs, file.path(Graphs,"Life_table.csv"))
 ```
 
 Clearly, the survival probabilities cascade much more rapidly for NTT and NTS faculty.
@@ -172,40 +175,33 @@ Clearly, the survival probabilities cascade much more rapidly for NTT and NTS fa
 The following graph plots the actuarial survival probabilities for each class of faculty.
 
 ``` r
-TYPE <- c(rep("Tenure-Track", 11), rep("Non-Tenure Track", 11), rep("Non-Tenure System", 
-    11))
-SURV <- c(LTs$`TT Surv`, LTs$`NTT Surv`, LTs$`NTS Surv`)
-SE <- c(LTs$`TT SE`, LTs$`NTT SE`, LTs$`NTS SE`)
-INTERVAL <- rep(c(0:10), 3)
-TIME <- rep(2 * c(0:10), 3)
-ymin <- SURV - 2 * SE
-ymax <- SURV + 2 * SE
-ltab2 <- data.frame(TYPE, SURV, TIME, ymin, ymax)
+TYPE<-c(rep("Tenure-Track",11), rep("Non-Tenure Track",11), rep("Non-Tenure System",11))
+SURV<-c(LTs$`TT Surv`,LTs$`NTT Surv`,LTs$`NTS Surv`)
+SE<-c(LTs$`TT SE`,LTs$`NTT SE`,LTs$`NTS SE`)
+INTERVAL<-rep(c(0:10),3)
+TIME<-rep(2*c(0:10),3)
+ymin<-SURV-2*SE
+ymax<-SURV+2*SE
+ltab2<-data.frame(TYPE,SURV,TIME,ymin,ymax)
 
-ggplot(ltab2, aes(x = TIME, y = SURV, group = rev(TYPE), colour = rev(TYPE))) + 
-    ylim(0.5, 1) + geom_step(size = 1) + labs(title = "Probability of Attrition from Academia", 
-    subtitle = "Life Table (Actuarial) Estimator", x = "Years Since First Academic Job", 
-    y = "Probability of Remaining in Academia") + scale_colour_manual(name = "Tenure Status", 
-    labels = c("Tenure-Track", "Non-tenure Track", "No Tenure System"), values = c("#E7B800", 
-        "#2E9FDF", "blue")) + theme_bw() + geom_rect(aes(xmin = TIME, xmax = TIME + 
-    2, ymin = ymin, ymax = ymax), alpha = 0.1)
+ggplot(ltab2, aes(x=TIME,y=SURV, group=rev(TYPE), colour=rev(TYPE))) + 
+  ylim(.5,1) +
+  geom_step(size=1) +
+  labs(title="Probability of Attrition from Academia", subtitle= "Life Table (Actuarial) Estimator", x="Years Since First Academic Job", y = "Probability of Remaining in Academia") +
+ scale_colour_manual(name="Tenure Status", labels=c("Tenure-Track", "Non-tenure Track","No Tenure System"), values=c("#E7B800", "#2E9FDF", "blue")) +
+  theme_bw() +
+  geom_rect(aes(xmin = TIME, xmax = TIME+2, ymin = ymin, ymax = ymax), alpha = 0.1)
 ```
 
 ![](graphs/Life_table_graph-1.png)
 
 #### Kaplan-Meier (Product Limit) Estimator
 
-These survival probabilities can also be estimated and graphed using the KM estimator. In this chapter, I will be reporting only the actuarial estimator, as it is more robust for larger samples.
+These survival probabilities can also be estimated and graphed using the KM estimator. In this chapter, I will be reporting only the actuarial estimator, as it is better computationally for larger samples.
 
 ``` r
-km.tenure <- survfit(Surv(TIME, Censor) ~ strata(EntryTENSTA), data = data, 
-    type = "kaplan-meier")
-ggsurvplot(km.tenure, data = data, ylim = c(0.5, 1), size = 1, palette = c("#E7B800", 
-    "#2E9FDF", "blue"), conf.int = TRUE, legend.labs = c("Tenure-Track", "Non-Tenure track", 
-    "No Tenure System"), ggtheme = theme_bw(), ncensor.plot.height = 0.25, title = "Probability of Remaining in Academia: by Initial Tenure Status", 
-    subtitle = "Kaplan-Meier Estimator", xlab = "Years Since First Academic Job", 
-    ylab = "Probability of Remaining in Academia", legend = "right", legend.title = "Tenure Status", 
-    ncensor.plot = F)
+km.tenure <- survfit( Surv(TIME, Censor)~ strata(EntryTENSTA), data=data, type="kaplan-meier")
+ggsurvplot(km.tenure, data = data, ylim = c(.5,1), size = 1, palette = c("#E7B800", "#2E9FDF", "blue"), conf.int = TRUE, legend.labs = c("Tenure-Track", "Non-Tenure track","No Tenure System"),  ggtheme = theme_bw(),  ncensor.plot.height = 0.25, title="Probability of Remaining in Academia: by Initial Tenure Status", subtitle="Kaplan-Meier Estimator", xlab="Years Since First Academic Job", ylab="Probability of Remaining in Academia", legend="right", legend.title="Tenure Status",ncensor.plot =F )
 ```
 
 ![](graphs/KM_Graph-1.png)
@@ -217,7 +213,7 @@ The default confidence interval (above) is log, which calculates intervals based
 Often it is useful to have a statistical test for whether survival curves of two (or more) groups differ. Let's look at the most common test, the log-rank test (a.k.a. the Mantel-Haenszel test).
 
 ``` r
-survdiff(Surv(TIME, Censor) ~ EntryTENSTA, data = data, rho = 0)  # log-rank or Mantel-Haenszel test
+survdiff(Surv(TIME, Censor) ~ EntryTENSTA, data=data,rho=0) # log-rank or Mantel-Haenszel test
 ```
 
     ## Call:
@@ -239,19 +235,21 @@ The null hypothesis for a log-rank test is that the groups have the same surviva
 
 #### Summary of Nonparametric models
 
-Substantially, the actuarial estimator and KM estimator tell similar stories. Attrition is much higher and more rapid for faculty working off the tenure track. The lifetable estimator perhaps shows a slightly higher attrition rate for NTS faculty, comparted to the KM estimate.
+Substantially, the actuarial estimator and KM estimator tell similar stories. Attrition is much higher and more rapid for faculty working off the tenure track. The lifetable estimator perhaps shows a slightly higher attrition rate for NTS faculty, compared to the KM estimate.
 
 Regression Models for Survival Data
 -----------------------------------
 
-There are two types of regression models in survival analysis, semi-parametric and fully-parametric. In this study, we will consider both approaches. For semi-parametric analysis, I'll utilize the cox proportional hazards model. I will first treat the censoring as right censoring. Then I will treat it as interval censored. Technically, these data are interval censored, however, there is not a good package yet for R that allows for interval censoring and also allows for interactions between tenure status and time. This interaction is crucial, because it allows for the cox model to handle non-proportional hazards. As Allison says, "Testing is both the diagnosis and the solution."
+There are two types of regression models in survival analysis, semi-parametric and fully-parametric. During the exploratory phase, this study considered both approaches. However, I ultimately opted for the semiparametric method of cox proportional hazards because of a similar fit and less stringent assumptions.
 
-For the parametric analysis (AFT models), we'll try different functional forms. At the end, I compare the results of the cox models with the results of the exponential form.
+The final models for this chapter are right censored Cox proportional hazards model. It is true that the data are also interval censored, however, the intervals are very close to being of equal length. As a result, we can treat this as a discrete time analyisis with right censored data. The interval censored functions were poorly developed and did not allow for interactions with time. So this also encouraged the use of a right censoring function which allowed for interactions with time. This interaction effectively allowed me to use the cox proportional hazards model even though the hazards of tenure-track and non-tenure track faculty are not proportional at one or more time points. This is particularly important during the years of tenure review, as the hazard of attrition likely shifts significantly for those faculty on the tenure line. To allow for non-proportional hazards, the final model interacts time with tenure status. As Allison says, "Testing is both the diagnosis and the solution."
+
+### Specification
 
 For specifying our models, we will subset the data and first train models using training data. After we are satisfied with that specification, we'll test all models using the independent test data. This will help prevent overfitting.
 
 ``` r
-smp_size <- floor(0.6 * nrow(data))
+smp_size <- floor(0.60 * nrow(data))
 set.seed(777)
 train_ind <- sample(seq_len(nrow(data)), size = smp_size)
 
@@ -259,266 +257,141 @@ train <- data[train_ind, ]
 test <- data[-train_ind, ]
 ```
 
-### Cox Proportional Hazards Model
-
-#### Right Censored Data Model
+Cox Proportional Hazards Models
+-------------------------------
 
 First, we fit a simple Cox model predicting attrition from academia from a categorical predictor of tenure status at workforce entry. We employ the efron method of dealing with ties, although other popular methods (e.g., breslow method) are available. The Efron approximation is more accurate when dealing with tied death times, and is as efficient computationally.
 
 The Surv function here frames censoring as follows. It assumes that individuals entered the study halfway through the previous interval. The extra year assumption was necessary to avoid "spontaneous attrition" that would have removed from the analysis any indiviudal who entered and exited during the same interval. As these early attriters are so very important to this study, we assume they entered halfway into the previous interval. This method treats censoring from the "EndDate"--that is, the last year he or she was still employed. Censoring, of course, happens after that point, so an individual who enters in year 0, remains in the study through year 2 in its entirety and subsequently drops out between year 2 and 4 would be coded as "3+." There are two years for the full interval, plus the extra entry year (assumption).
 
+Naive Model
+-----------
+
 ``` r
-RC_Mod1 <- coxph(Surv(TIME2, Censor) ~ NTT + NTS, data = test, method = "efron")  # breslow option available
-summary(RC_Mod1)
+#Just the naive model
+cox1 <- coxph( Surv(TIME2, Censor) ~ NTT + NTS, data = test,  method="efron", robust = TRUE)
 ```
 
 Proportional Hazards models and AFT models must be interpreted in different ways. AFT models give the percentage change in survival time. Cox PH models give the percentage change to the hazard at all time points, following this formula: *h*(*t*)=*h*<sub>0</sub>(*t*)*e*<sup>(*β*′*x*)</sup>
 
-In this case, the effect of initial tenure status on time to attrition has an estimated coefficient of 1.0089259 and 1.3237404. Exponentiated, this means that subjects appointed to lower tenure-status jobs multiply their baseline hazards *h*<sub>0</sub>(*t*) by a factor of 2.7426537 and 3.7574493. Their "risk"" of attriting from academia is 174.2653671 and 275.744933 percent higher than academics who begin immediately on the tenure-track. Importantly, Cox models state that this is the impact on the subject's hazard at any given time, t. It does not, however, imply an expansion (or contraction) of the lifespan of the subject.
+In this case, the effect of initial tenure status on time to attrition has an estimated coefficient of 1.0089259 and 1.3237404. Exponentiated, this means that subjects appointed to lower tenure-status jobs multiply their baseline hazards *h*<sub>0</sub>(*t*) by a factor of 2.7426537 and 3.7574493. Their "risk" of attriting from academia is 174.2653671 and 275.744933 percent higher than academics who begin immediately on the tenure-track. Importantly, Cox models state that this is the impact on the subject's hazard at any given time, t. It does not, however, imply an expansion (or contraction) of the lifespan of the subject (as AFT models do).
 
-An important limitation of this model is that it does not account for the possibility of non-proportional hazards based on tenure status. Let's test whether the proportional hazards assumption may have been violated in this analysis.
+Controls Model
+--------------
+
+Now we introduce controls to the model.
 
 ``` r
-cox.zph <- cox.zph(RC_Mod1, transform = "km")
-round(cox.zph$table, 3)
+cox2 <- coxph( Surv(TIME2, Censor) ~ NTT + NTS + DEG2ENTRY +
+    EntryWAPRI + EntryPUBPRI + EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + EntryCHLVIN + 
+    EntryCTZUSIN, data = test,  method="efron", robust = TRUE)
 ```
 
-    ##           rho  chisq     p
-    ## NTT    -0.052  3.716 0.054
-    ## NTS    -0.103 14.291 0.000
-    ## GLOBAL     NA 15.170 0.001
+Mediators Model
+---------------
+
+Now we introduce mediators to the model.
+
+``` r
+#Model with mediators
+cox3 <- coxph( Surv(TIME2, Censor) ~ NTT + NTS + DEG2ENTRY +
+    EntryWAPRI + EntryPUBPRI + EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + EntryCHLVIN + 
+    EntryCTZUSIN + EntryWKTRNI + LogSalary, data = test,  method="efron", robust = TRUE)
+```
+
+An important limitation of these models up to this point is that they do not account for the possibility of non-proportional hazards based on tenure status. Let's test whether the proportional hazards assumption may have been violated in this analysis.
+
+``` r
+cox.zph <- cox.zph(cox3, transform="km")
+round(cox.zph$table,3)
+```
+
+    ##                                    rho  chisq     p
+    ## NTT                             -0.076  6.799 0.009
+    ## NTS                             -0.127 17.073 0.000
+    ## DEG2ENTRY                        0.016  0.347 0.556
+    ## EntryWAPRIOther                 -0.053  3.161 0.075
+    ## EntryWAPRIResearch              -0.073  5.763 0.016
+    ## EntryPUBPRIPrivate              -0.049  3.012 0.083
+    ## EntryEMTPTwo-year                0.012  0.198 0.656
+    ## EntryEMTPMed                     0.139 23.255 0.000
+    ## EntryEMTPUni Research Institute -0.010  0.124 0.725
+    ## SDRCARNR2                       -0.028  0.952 0.329
+    ## SDRCARNDoctorate                -0.018  0.384 0.535
+    ## SDRCARNOther                     0.005  0.038 0.846
+    ## SDRCARNMedHealth                 0.062  4.203 0.040
+    ## EntryAGE                         0.034  1.407 0.236
+    ## GENDERFemale                     0.029  1.045 0.307
+    ## MINRTYYes                       -0.056  3.881 0.049
+    ## EntryMARINDYes                  -0.047  2.796 0.094
+    ## EntryCHLVINYes                  -0.034  1.405 0.236
+    ## EntryCTZUSINCitizen              0.012  0.170 0.680
+    ## EntryWKTRNITraining             -0.010  0.124 0.725
+    ## LogSalary                       -0.072  4.287 0.038
+    ## GLOBAL                              NA 73.672 0.000
 
 This function tests proportionality by interacting each predictor with log time (km transformation). Rho is the pearson product-moment correlation between the scaled residuals (Schoenfeld) and log(time) for each covariate. The global test jointly tests all of the interactions. Low p-values suggest a violation of the assumption of proportional hazards.
 
-Now let's build a more comprehensive model. Importantly we'll include an interaction between time and our tenure status variables (NTT or NTS dummies) to test the assumption of proportional hazards and also correct for non-proportional hazards. Here we use the TIME2 variable which simply adds an extra year to everyone's event time.
+Full Model
+----------
+
+Now let's build a final, comprehensive model. Importantly we'll include an interaction between time and our tenure status variables (NTT or NTS dummies) to test the assumption of proportional hazards and also correct for non-proportional hazards. We'll also include the interaction between institution type and control.
 
 ``` r
-RC_Mod2 <- coxph(Surv(TIME2, Censor) ~ NTT + NTS + DEG2ENTRY + EntryWAPRI + 
-    EntryWKTRNI + LogSalary + EntryPUBPRI + EntryEMTP + EntryPUBPRI * EntryEMTP + 
-    SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + EntryCHLVIN + EntryCTZUSIN + 
-    tt(NTT) + tt(NTS), data = test, method = "efron", robust = TRUE, tt = function(x, 
-    t, ...) x * log(t))
-summary(RC_Mod2)
+cox4 <- coxph( Surv(TIME2, Censor) ~ NTT + NTS + DEG2ENTRY + EntryWAPRI + EntryPUBPRI + EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + EntryCHLVIN + EntryCTZUSIN + EntryWKTRNI + LogSalary + tt(NTT) + tt(NTS) + EntryPUBPRI*EntryEMTP, data = test,  method="efron", robust = TRUE, tt = function(x, t, ...) x * log(t))
 ```
 
 Even after controlling for background characteristics, there are significant differences. Here, NTT status or working at a college or university without a tenure system impacts the hazard, multiplying the baseline by a factor of 2.7741545 and 3.352443. This is equivalent to saying that each tenure status increases the hazard of attrition by 177.4154456 and 235.2443049 percent, controlling for background characteristics. R output also provides the exponentiated negative coefficient. To my understanding, that just allows you to compare the groups relative to the baseline hazard of the tenure-track group. Robust standard errors were used in this model.
 
-The model reveals other important predcitors, including the subject's main job and possible interactions between institution type and public/private status.
+The model reveals other important predictors, including the subject's main job and possible interactions between institution type and public/private status.
 
-#### Interval Censored Data Model
-
-The data used in this study not only have right censoring, they are interval censored. We know the interval during when an event took place, but we do not know the particular time of the event. Unfortunately, the well-developed and supported function coxph() from the survival package does not handle interval censoring. I searched for a different R package capable of handling interval censoring and found the icenreg package. There is some documentation for this package, however, it is considerably less developed than functions in the suvival package.
-
-We'll follow the same model development approach as in the last specification. We'll try to develop a complex model using training data and then apply this model to test data.
-
-Using this method does not require the assumption that the subject enters the study midway through the previous wave. It only depends on the interval itself.
+Tabulation of All models
+------------------------
 
 ``` r
-IC_Mod1 <- ic_sp(Surv(lower, upper, type = "interval2") ~ NTT + NTS, model = "ph", 
-    bs_samples = 100, data = test)
-summary(IC_Mod1)
+Mod1<-rbind(summary(cox1)$coefficients[,c(2,5,6)], fill_spaces(24,3))
+Mod2<-rbind(summary(cox2)$coefficients[,c(2,5,6)], fill_spaces(7,3))
+Mod3<-rbind(summary(cox3)$coefficients[,c(2,5,6)], fill_spaces(5,3))
+Mod4<-summary(cox4)$coefficients[,c(2,5,6)]
+
+Final_Table<-cbind(Mod1, Mod2, Mod3, Mod4)
+rownames(Final_Table)<-rownames(summary(cox4)$coef)
+colnames(Final_Table)<-c("Mod1_HR","Mod1_z","Mod1_pval","Mod2_HR","Mod2_z","Mod2_pval","Mod3_HR","Mod3_z","Mod3_pval","Mod4_HR","Mod4_z","Mod4_pval")
+kable(Final_Table)
 ```
+
+|                                                    |  Mod1\_HR|   Mod1\_z|  Mod1\_pval|   Mod2\_HR|     Mod2\_z|  Mod2\_pval|   Mod3\_HR|     Mod3\_z|  Mod3\_pval|   Mod4\_HR|     Mod4\_z|  Mod4\_pval|
+|----------------------------------------------------|---------:|---------:|-----------:|----------:|-----------:|-----------:|----------:|-----------:|-----------:|----------:|-----------:|-----------:|
+| NTT                                                |  2.742654|  10.62914|           0|  2.3565254|   8.6429732|   0.0000000|  2.3000975|   8.3044999|   0.0000000|  2.7741545|   7.2893383|   0.0000000|
+| NTS                                                |  3.757449|  16.77793|           0|  2.6151224|  10.9462626|   0.0000000|  2.5368381|  10.3990629|   0.0000000|  3.3524430|   9.7151586|   0.0000000|
+| DEG2ENTRY                                          |        NA|        NA|          NA|  0.9780665|  -1.2648273|   0.2059332|  0.9812951|  -1.0704249|   0.2844281|  0.9820066|  -1.0298818|   0.3030655|
+| EntryWAPRIOther                                    |        NA|        NA|          NA|  1.6653979|   4.9945942|   0.0000006|  1.6869666|   5.1242022|   0.0000003|  1.6507824|   4.8980905|   0.0000010|
+| EntryWAPRIResearch                                 |        NA|        NA|          NA|  1.5743821|   5.2155889|   0.0000002|  1.5867156|   5.2869869|   0.0000001|  1.5585873|   5.0868146|   0.0000004|
+| EntryPUBPRIPrivate                                 |        NA|        NA|          NA|  1.0597033|   0.9490728|   0.3425836|  1.0659701|   1.0459951|   0.2955633|  0.9477651|  -0.6118430|   0.5406416|
+| EntryEMTPTwo-year                                  |        NA|        NA|          NA|  1.0385268|   0.1853365|   0.8529651|  1.0214819|   0.1035308|   0.9175417|  0.8319744|  -0.7733996|   0.4392859|
+| EntryEMTPMed                                       |        NA|        NA|          NA|  1.2152175|   2.6587894|   0.0078422|  1.2146126|   2.6517060|   0.0080086|  1.1397273|   1.3440400|   0.1789354|
+| EntryEMTPUni Research Institute                    |        NA|        NA|          NA|  1.1714475|   1.8315566|   0.0670175|  1.1792170|   1.9053315|   0.0567370|  1.0589085|   0.5374091|   0.5909850|
+| SDRCARNR2                                          |        NA|        NA|          NA|  1.1470554|   1.4194103|   0.1557794|  1.1477243|   1.4260680|   0.1538487|  1.1498291|   1.4417399|   0.1493758|
+| SDRCARNDoctorate                                   |        NA|        NA|          NA|  1.1036693|   0.9943637|   0.3200458|  1.1023669|   0.9817950|   0.3262009|  1.1051577|   1.0194901|   0.3079703|
+| SDRCARNOther                                       |        NA|        NA|          NA|  1.2640600|   1.1339058|   0.2568341|  1.2387926|   1.0217128|   0.3069169|  1.2370769|   1.0158110|   0.3097194|
+| SDRCARNMedHealth                                   |        NA|        NA|          NA|  1.0764915|   0.5465142|   0.5847126|  1.0707195|   0.5074136|   0.6118647|  1.0728198|   0.4951720|   0.6204787|
+| EntryAGE                                           |        NA|        NA|          NA|  0.9956296|  -0.8583280|   0.3907114|  0.9956620|  -0.8501841|   0.3952228|  0.9958946|  -0.8128147|   0.4163243|
+| GENDERFemale                                       |        NA|        NA|          NA|  0.9264368|  -1.2869294|   0.1981189|  0.9184368|  -1.4271422|   0.1535389|  0.9181464|  -1.4340915|   0.1515461|
+| MINRTYYes                                          |        NA|        NA|          NA|  1.0252689|   0.3220834|   0.7473895|  1.0268595|   0.3425822|   0.7319128|  1.0296921|   0.3813277|   0.7029601|
+| EntryMARINDYes                                     |        NA|        NA|          NA|  0.9172141|  -1.2323093|   0.2178336|  0.9156365|  -1.2556640|   0.2092378|  0.9120943|  -1.3077190|   0.1909686|
+| EntryCHLVINYes                                     |        NA|        NA|          NA|  0.9905358|  -0.1339133|   0.8934711|  0.9884834|  -0.1629914|   0.8705252|  0.9919569|  -0.1141935|   0.9090844|
+| EntryCTZUSINCitizen                                |        NA|        NA|          NA|  1.0570681|   0.8085050|   0.4187999|  1.0555757|   0.7879393|   0.4307322|  1.0587435|   0.8331092|   0.4047832|
+| EntryWKTRNITraining                                |        NA|        NA|          NA|         NA|          NA|          NA|  1.0260713|   0.4355781|   0.6631429|  1.0272647|   0.4550056|   0.6491052|
+| LogSalary                                          |        NA|        NA|          NA|         NA|          NA|          NA|  0.9291256|  -2.2112916|   0.0270157|  0.9282446|  -2.1343236|   0.0328163|
+| tt(NTT)                                            |        NA|        NA|          NA|         NA|          NA|          NA|         NA|          NA|          NA|  0.8229292|  -1.7121377|   0.0868713|
+| tt(NTS)                                            |        NA|        NA|          NA|         NA|          NA|          NA|         NA|          NA|          NA|  0.7083724|  -3.5035737|   0.0004591|
+| EntryPUBPRIPrivate:EntryEMTPTwo-year               |        NA|        NA|          NA|         NA|          NA|          NA|         NA|          NA|          NA|  2.9717977|   2.2596388|   0.0238437|
+| EntryPUBPRIPrivate:EntryEMTPMed                    |        NA|        NA|          NA|         NA|          NA|          NA|         NA|          NA|          NA|  1.1791694|   1.1931475|   0.2328116|
+| EntryPUBPRIPrivate:EntryEMTPUni Research Institute |        NA|        NA|          NA|         NA|          NA|          NA|         NA|          NA|          NA|  1.3507137|   1.7709123|   0.0765753|
 
 ``` r
-IC_Mod1 <- ic_sp(Surv(lower, upper, type = "interval2") ~ NTT + NTS + DEG2ENTRY + 
-    EntryWAPRI + EntryWKTRNI + LogSalary + EntryPUBPRI + EntryEMTP + EntryPUBPRI * 
-    EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + EntryCHLVIN + 
-    EntryCTZUSIN, model = "ph", bs_samples = 100, data = test)
-summary(IC_Mod1)
+write.csv(Final_Table, file.path(Graphs,"Final_Table.csv"))
 ```
-
-``` r
-# This is time-intensive at bs_samples=10, maybe a minute per sample.
-IC_Mod2 <- ic_sp(Surv(lower, upper, type = "interval2") ~ NTT + NTS + DEG2ENTRY + 
-    EntryWAPRI + EntryWKTRNI + LogSalary + EntryPUBPRI + EntryEMTP + EntryPUBPRI * 
-    EntryEMTP + EntryPUBPRI * EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + 
-    EntryMARIND + EntryCHLVIN + EntryCTZUSIN + TIME * NTT + TIME * NTS, model = "ph", 
-    bs_samples = 10, data = test)
-summary(IC_Mod2)
-# Also, this model is wrong because there should not be a coefficient
-# produced for time.  Furthermore, that coefficient sops up all the
-# variation in event times
-```
-
-#### Summary of Cox Proportional Hazard Models
-
-If the proportional hazards assumption holds, then it is possible to estimate the effect of parameter(s) without any consideration of the baseline hazard function. As mentioned, this is in contrast to parametric models--the focus of our next section. Even when proportional hazards are not truly proportional, we can include an interaction between the variable and time to correct for it.
-
-### Accelerated Failure Time Models
-
-First, we assume the outcome has an exponential distribution--a good baseline distribution to start with (simplifies calculations). The exponential distribution implies a constant hazard rate. The advantage of the Weibull (and by extention the exponential), is that it can be parameterised as a PH model or an AFT model. In other words, the Weibull family can be interpreted as affecting the risk of event occurance or the duration of the lifespan.
-
-For fully parameterized models, the timing of an event matters (unlike the cox models that only require the order). So here we must also make an assumption that subject begin their academic work midway through the previous interval. So we add unity to the upper and lower interval bounds to adjust for this.
-
-#### Mathematics
-
-1.  Construct the likelihood function
-    -   uncensored cases contribute their density probability at t
-    -   censored cases contribute their survival probability at t
-
-2.  Simplify the expression
-3.  Take the log to simplify the math
-4.  Calculate the derivative and set it equal to zero
-5.  Solve using, typically, the Newton-Raphson algorithm
-
-``` r
-Exp_mod <- survreg(Surv(lower + 1, upper + 1, type = "interval2") ~ NTT + NTS + 
-    DEG2ENTRY + EntryWAPRI + EntryWKTRNI + LogSalary + EntryPUBPRI + EntryEMTP + 
-    EntryPUBPRI * EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + 
-    EntryCHLVIN + EntryCTZUSIN, data = test, dist = "exponential", robust = TRUE)
-```
-
-``` r
-loglog_mod <- survreg(Surv(lower + 1, upper + 1, type = "interval2") ~ NTT + 
-    NTS + DEG2ENTRY + EntryWAPRI + EntryWKTRNI + LogSalary + EntryPUBPRI + EntryEMTP + 
-    EntryPUBPRI * EntryEMTP + SDRCARN + EntryAGE + GENDER + MINRTY + EntryMARIND + 
-    EntryCHLVIN + EntryCTZUSIN, data = test, dist = "loglogistic", robust = TRUE)
-```
-
-``` r
-summary(Exp_mod)$loglik[2]
-```
-
-    ## [1] -4126.629
-
-``` r
-summary(loglog_mod)$loglik[2]
-```
-
-    ## [1] -4039.262
-
-Because the log-likelihood is higher (less negative), the log logistic model actually fits the data better. The higher logliklihood simply means that that the probability of the data is marginally closer to 1 (certitude). However, the exponential distribution fits the data similarly. In addition, parameterizing log(time) as an exponential function allows me to convert coefficients to hazards ratios. I can therefore compare the results to the findings of the cox models. As the final analysis will be a cox model, I use the exponential AFT for validation purposes.
-
-### AFT Specification
-
-``` r
-table <- as.data.frame(summary(Exp_mod)$table)
-rownames(table) <- c("Intercept", "Non-tenure Track", "No Tenure System", "Time between Degree and Job", 
-    "Administration/Other", "Research", "Workplace Training", "Log Salary", 
-    "Private Control", "Two-year", "Medical", "Research Institute", "PhD Research II", 
-    "PhD Doctorate Institution", "PhD Other", "PhD Medical/Health", "Age", "Female", 
-    "Minority", "Married", "Parent", "Citizen", "Private x Two-Year", "Private x Medical", 
-    "Private x Research Institute")
-table$expCoef <- exp(table$Value)
-names(table)[names(table) == "Std. Err"] <- "Robust SE"
-aft_table <- round(table[, c("Value", "expCoef", "Robust SE", "z", "p")], 3)
-kable(aft_table)
-```
-
-The exponential distribution has a constant hazard *λ*(*t*)=*λ* and thus a survival function of *S*(*t*)=*e*<sup>−*λ*(*t*)</sup> and density of *f*(*t*)=*λ* × *e*<sup>−*λ*(*t*)</sup>. An interesting occurance is that the expected survival time for this distribution is *E*(*t*)=1/*λ* and its variance is *E*(*t*)=1/*λ*<sup>2</sup>. This makes the mean survival time equal to e^intercept (42.7369411). It's inverse (0.023399) is the MLE of the (constant) hazard rate. Of course, the model performs poorly extrapolating to such an extreme timepoint.
-
-AFT models are typcally interpreted in a way that covariates have a multiplicative effect on the expected survival time. So, with regard to tenure status, taking your first job as NTT accelerates the time to attrition by a factor of 0.3984863 (0.3984863 times shorter survival time compared to the baseline survival). Beginning an academic career in a non-tenure system accelerates the time to attrition by a factor of 0.3455454. The life course for these states is -60.1513682 and -65.4454634 percent shorter, respectively.
-
-The Weibull family of distributions (of which the exponential is a sub-class) has the advantage that covariates can also be interpreted as an impact on the hazard ratios. For this famiily of distributions, the coefficient is multiplied by -1 and then multiplied by a shape parameter (1/scale parameter). In the case of the exponential distributuion, the shape parameter is simply 1/1. So in our case, the hazard ratio comparing NTT to tenure-track positions is 2.5094964. The risk of attrition increases by a factor of 2.5094964 when one begins an academic career in a NTT position. Faculty with a first job at a non-teure system institution increases their risk by a factor of 2.893976.
-
-Comparing the Exponential AFT Model and the Cox Models
-------------------------------------------------------
-
-``` r
-space <- c("", "")
-aft_table2 <- rbind(aft_table[1:22, c(1, 5)], space, space, aft_table[23:25, 
-    c(1, 5)])
-RC_cox_table2 <- rbind(space, RC_cox_table[, c(2, 6)])
-IC_cox_table2 <- rbind(space, IC_cox_table[1:21, c(2, 5)], space, space, IC_cox_table[22:24, 
-    c(2, 5)])
-ctable <- cbind(aft_table2, RC_cox_table2, IC_cox_table2)
-rownames(ctable) <- rownames(RC_cox_table2)
-rownames(ctable)[1] <- "Intercept"
-ctable$Value <- round(exp(as.numeric(aft_table2$Value) * -1 * 1/1), 3)  # convert to hazard ratios
-colnames(ctable) <- c("AFT:HR", "AFT p-val", "RC Cox:HR", "RC Cox p-val", "IC Cox:HR", 
-    "IC Cox p-val")
-kable(ctable)
-```
-
-|                              |  AFT:HR| AFT p-val | RC Cox:HR | RC Cox p-val | IC Cox:HR | IC Cox p-val |
-|------------------------------|-------:|:----------|:----------|:-------------|:----------|:-------------|
-| Intercept                    |   0.023| 0         |           |              |           |              |
-| Non-tenure Track (NTT)       |   2.509| 0         | 2.774     | 0            | 1.037     | 0            |
-| No Tenure System             |   2.895| 0         | 3.352     | 0            | 0.999     | 0.963        |
-| Time between Degree and Job  |   1.003| 0.867     | 0.982     | 0.303        | 1         | 0.948        |
-| Admin/Other                  |   1.621| 0         | 1.651     | 0            | 1.011     | 0.613        |
-| Researcher                   |   1.486| 0         | 1.559     | 0            | 1.01      | 0.681        |
-| Workplace Training           |   1.030| 0.623     | 1.027     | 0.649        | 0.986     | 0            |
-| Log Salary                   |   0.947| 0.119     | 0.928     | 0.033        | 0.989     | 0.295        |
-| Private Control              |   0.946| 0.545     | 0.948     | 0.541        | 0.988     | 0            |
-| Two-year/Other               |   0.799| 0.35      | 0.832     | 0.439        | 1.008     | 0.75         |
-| Medical                      |   1.185| 0.083     | 1.14      | 0.179        | 1.026     | 0.182        |
-| Research Institute           |   1.074| 0.522     | 1.059     | 0.591        | 1.022     | 0.033        |
-| PhD Research II              |   1.175| 0.102     | 1.15      | 0.149        | 1.011     | 0.759        |
-| PhD Doctorate Institution    |   1.122| 0.259     | 1.105     | 0.308        | 0.994     | 0.009        |
-| PhD Other                    |   1.274| 0.257     | 1.237     | 0.31         | 1.019     | 0.392        |
-| PhD Medical/Health           |   1.107| 0.463     | 1.073     | 0.62         | 1.013     | 0.372        |
-| Age                          |   0.995| 0.347     | 0.996     | 0.416        | 1         | 0.517        |
-| Female                       |   0.961| 0.512     | 0.918     | 0.152        | 1.012     | 0.039        |
-| Minority                     |   1.022| 0.778     | 1.03      | 0.703        | 1.01      | 0.18         |
-| Married                      |   0.903| 0.155     | 0.912     | 0.191        | 1.006     | 0.001        |
-| Children                     |   0.982| 0.807     | 0.992     | 0.909        | 0.986     | 0            |
-| Citizen                      |   0.936| 0.347     | 1.059     | 0.405        | 0.995     | 0.201        |
-| Time x NTT                   |      NA|           | 0.823     | 0.087        |           |              |
-| Time x No Tenure System      |      NA|           | 0.708     | 0            |           |              |
-| Private x Two-Year           |   3.885| 0.001     | 2.972     | 0.024        | 0         | 0            |
-| Private x Medical            |   1.175| 0.249     | 1.179     | 0.233        | 0.997     | 0.94         |
-| Private x Research Institute |   1.339| 0.101     | 1.351     | 0.077        | 1.006     | 0.762        |
-
-The results of the AFT model (exponential) look similar to the results from the cox models. This helps to validate the findings.
-
-Comparing the RC and IC cox models, we see that the models differ slightly. The Right censored (RC) model includes the time interaction with tenure status, but it fails to deal with the interval censoring of the data and assume every individual entered his or her job midway through the previous interval. The Interval censored (IC) model effectivey handles the interval censoring, but it does not allow for an interaction between time and tenure status. Nevertheless, the results are comparable.
-
-The fit statistics of these two models is difficult to reconcile. The RC model has an Rsquare of 0.047. The log likelihood is listed as -1.013048210^{4}, -9937.5887645. I'm not sure what these two numbers mean. Perhaps one is only for the intercept? The IC model reports a log likelihood of -3637.8432675, which is considerably different from the RC model.
-
-The tenure status coefficients associated with the exponential AFT model are a little bit less, but generally the results across these models are comparable.
-
-Final Model
------------
-
-The final model for this chapter is a right censored Cox proportional hazards model. It is true that the data are also interval censored, however, the intervals are very close to being of equal length. As a result, we can treat this as a discrete time analyisis with right censored data. Importantly, the right censored model allows us to include a timme interaction. This effectively allows us to use the cox proportional hazards model even though the hazards of tenure-track and non-tenure track faculty are not proportional at one or more time points. This is particularly important during the years of tenure review, as the hazard of attrition likely shifts significantly for those faculty on the tenure line.
-
-``` r
-names(RC_cox_table) <- c("coef", "exp(coef)", "SE", "Robust SE", "z stat", "p value")
-kable(RC_cox_table)
-```
-
-|                              |    coef|  exp(coef)|     SE|  Robust SE|  z stat|  p value|
-|------------------------------|-------:|----------:|------:|----------:|-------:|--------:|
-| Non-tenure Track (NTT)       |   1.020|      2.774|  0.143|      0.140|   7.289|    0.000|
-| No Tenure System             |   1.210|      3.352|  0.128|      0.125|   9.715|    0.000|
-| Time between Degree and Job  |  -0.018|      0.982|  0.017|      0.018|  -1.030|    0.303|
-| Admin/Other                  |   0.501|      1.651|  0.106|      0.102|   4.898|    0.000|
-| Researcher                   |   0.444|      1.559|  0.091|      0.087|   5.087|    0.000|
-| Workplace Training           |   0.027|      1.027|  0.059|      0.059|   0.455|    0.649|
-| Log Salary                   |  -0.074|      0.928|  0.037|      0.035|  -2.134|    0.033|
-| Private Control              |  -0.054|      0.948|  0.087|      0.088|  -0.612|    0.541|
-| Two-year/Other               |  -0.184|      0.832|  0.234|      0.238|  -0.773|    0.439|
-| Medical                      |   0.131|      1.140|  0.097|      0.097|   1.344|    0.179|
-| Research Institute           |   0.057|      1.059|  0.107|      0.107|   0.537|    0.591|
-| PhD Research II              |   0.140|      1.150|  0.097|      0.097|   1.442|    0.149|
-| PhD Doctorate Institution    |   0.100|      1.105|  0.098|      0.098|   1.019|    0.308|
-| PhD Other                    |   0.213|      1.237|  0.207|      0.209|   1.016|    0.310|
-| PhD Medical/Health           |   0.070|      1.073|  0.141|      0.142|   0.495|    0.620|
-| Age                          |  -0.004|      0.996|  0.005|      0.005|  -0.813|    0.416|
-| Female                       |  -0.085|      0.918|  0.060|      0.060|  -1.434|    0.152|
-| Minority                     |   0.029|      1.030|  0.077|      0.077|   0.381|    0.703|
-| Married                      |  -0.092|      0.912|  0.070|      0.070|  -1.308|    0.191|
-| Children                     |  -0.008|      0.992|  0.071|      0.071|  -0.114|    0.909|
-| Citizen                      |   0.057|      1.059|  0.069|      0.069|   0.833|    0.405|
-| Time x NTT                   |  -0.195|      0.823|  0.117|      0.114|  -1.712|    0.087|
-| Time x No Tenure System      |  -0.345|      0.708|  0.100|      0.098|  -3.504|    0.000|
-| Private x Two-Year           |   1.089|      2.972|  0.476|      0.482|   2.260|    0.024|
-| Private x Medical            |   0.165|      1.179|  0.137|      0.138|   1.193|    0.233|
-| Private x Research Institute |   0.301|      1.351|  0.170|      0.170|   1.771|    0.077|
-
-``` r
-summary(RC_Mod2)$rsq  # Fit statistic
-```
-
-    ##        rsq     maxrsq 
-    ## 0.04763105 0.92293120
-
-``` r
-write.csv(RC_cox_table, file.path(Graphs, "RC_cox_table.csv"))
-```
-
-R output also reports the concordance, likelihood ratio test, wald test and score (logrank) test.
 
 Conclusions
 -----------
